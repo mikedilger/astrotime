@@ -8,3 +8,6 @@
      clippy::nursery,
      clippy::cargo,
 )]
+
+mod error;
+pub use error::Error;
