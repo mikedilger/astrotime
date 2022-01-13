@@ -12,6 +12,9 @@
 #[allow(unused_imports)]
 #[macro_use] extern crate log;
 
+mod duration;
+pub use duration::Duration;
+
 mod error;
 pub use error::Error;
 
@@ -19,7 +22,6 @@ pub use error::Error;
 #[cfg(test)]
 static INIT: std::sync::Once = std::sync::Once::new();
 #[cfg(test)]
-#[allow(dead_code)]
 fn setup_logging() {
     INIT.call_once(|| {
         pretty_env_logger::init();
