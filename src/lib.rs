@@ -24,6 +24,10 @@ pub use duration::Duration;
 mod error;
 pub use error::Error;
 
+mod standard;
+pub use standard::{Standard, Tt, Tcg, Tcb, Tai, Utc};
+
+
 // When running tests, we setup the logger
 #[cfg(test)]
 static INIT: std::sync::Once = std::sync::Once::new();
