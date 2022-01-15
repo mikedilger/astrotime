@@ -12,6 +12,9 @@
 #[allow(unused_imports)]
 #[macro_use] extern crate log;
 
+mod calendar;
+pub use calendar::{Calendar, Julian, Gregorian};
+
 mod duration;
 pub use duration::Duration;
 

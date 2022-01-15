@@ -6,6 +6,8 @@ use std::fmt;
 pub enum Error {
     /// General errors
     General(String),
+    /// Out of Range
+    RangeError,
 }
 
 impl StdError for Error {
@@ -18,6 +20,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Error::General(ref s) => write!(f, "{}", s),
+            Error::RangeError => write!(f, "Value provided is out of range"),
         }
     }
 }
