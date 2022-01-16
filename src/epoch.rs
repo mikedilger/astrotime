@@ -120,82 +120,84 @@ mod test {
     use crate::calendar::{Julian, Gregorian};
     use crate::date_time::DateTime;
     use crate::instant::Instant;
+    use crate::standard::Tt;
 
     #[test]
     fn check_epochs_and_conversion() {
         crate::setup_logging();
 
         let instant = Epoch::JulianCalendar.as_instant();
-        let dt: DateTime<Julian> = From::from(instant);
-        assert_eq!(dt, DateTime::<Julian>::new(1, 1, 1, 0, 0, 0, 0).unwrap());
+        let dt: DateTime<Julian, Tt> = From::from(instant);
+        assert_eq!(dt, DateTime::<Julian, Tt>::new(1, 1, 1, 0, 0, 0, 0).unwrap());
         let check: Instant = From::from(dt);
         assert_eq!(instant, check);
 
         let instant = Epoch::GregorianCalendar.as_instant();
-        let dt: DateTime<Gregorian> = From::from(instant);
-        assert_eq!(dt, DateTime::<Gregorian>::new(1, 1, 1, 0, 0, 0, 0).unwrap());
+        let dt: DateTime<Gregorian, Tt> = From::from(instant);
+        assert_eq!(dt, DateTime::<Gregorian, Tt>::new(1, 1, 1, 0, 0, 0, 0).unwrap());
         let check: Instant = From::from(dt);
         assert_eq!(instant, check);
 
         let instant = Epoch::JulianPeriod.as_instant();
-        let dt: DateTime<Julian> = From::from(instant);
-        assert_eq!(dt, DateTime::<Julian>::new_bc(4713, 1, 1, 12, 0, 0, 0).unwrap());
+        let dt: DateTime<Julian, Tt> = From::from(instant);
+        assert_eq!(dt, DateTime::<Julian, Tt>::new_bc(4713, 1, 1, 12, 0, 0, 0).unwrap());
         let check: Instant = From::from(dt);
         assert_eq!(instant, check);
 
         let instant = Epoch::J1900_0.as_instant();
-        let dt: DateTime<Gregorian> = From::from(instant);
-        assert_eq!(dt, DateTime::<Gregorian>::new(1899, 12, 31, 12, 0, 0, 0).unwrap());
+        let dt: DateTime<Gregorian, Tt> = From::from(instant);
+        assert_eq!(dt, DateTime::<Gregorian, Tt>::new(1899, 12, 31, 12, 0, 0, 0).unwrap());
         let check: Instant = From::from(dt);
         assert_eq!(instant, check);
 
         let instant = Epoch::E1900_0.as_instant();
-        let dt: DateTime<Gregorian> = From::from(instant);
-        assert_eq!(dt, DateTime::<Gregorian>::new(1900, 1, 1, 0, 0, 0, 0).unwrap());
+        let dt: DateTime<Gregorian, Tt> = From::from(instant);
+        assert_eq!(dt, DateTime::<Gregorian, Tt>::new(1900, 1, 1, 0, 0, 0, 0).unwrap());
         let check: Instant = From::from(dt);
         assert_eq!(instant, check);
 
         let instant = Epoch::J1991_25.as_instant();
-        let dt: DateTime<Gregorian> = From::from(instant);
-        assert_eq!(dt, DateTime::<Gregorian>::new(1991, 4, 2, 13, 30, 0, 0).unwrap());
+        let dt: DateTime<Gregorian, Tt> = From::from(instant);
+        assert_eq!(dt, DateTime::<Gregorian, Tt>::new(1991, 4, 2, 13, 30, 0, 0).unwrap());
         let check: Instant = From::from(dt);
         assert_eq!(instant, check);
 
         let instant = Epoch::J2000_0.as_instant();
-        let dt: DateTime<Gregorian> = From::from(instant);
-        assert_eq!(dt, DateTime::<Gregorian>::new(2000, 1, 1, 12, 0, 0, 0).unwrap());
+        let dt: DateTime<Gregorian, Tt> = From::from(instant);
+        assert_eq!(dt, DateTime::<Gregorian, Tt>::new(2000, 1, 1, 12, 0, 0, 0).unwrap());
         let check: Instant = From::from(dt);
         assert_eq!(instant, check);
 
         let instant = Epoch::J2100_0.as_instant();
-        let dt: DateTime<Gregorian> = From::from(instant);
-        assert_eq!(dt, DateTime::<Gregorian>::new(2100, 1, 1, 12, 0, 0, 0).unwrap());
+        let dt: DateTime<Gregorian, Tt> = From::from(instant);
+        assert_eq!(dt, DateTime::<Gregorian, Tt>::new(2100, 1, 1, 12, 0, 0, 0).unwrap());
         let check: Instant = From::from(dt);
         assert_eq!(instant, check);
 
         let instant = Epoch::J2200_0.as_instant();
-        let dt: DateTime<Gregorian> = From::from(instant);
-        assert_eq!(dt, DateTime::<Gregorian>::new(2200, 1, 2, 12, 0, 0, 0).unwrap());
+        let dt: DateTime<Gregorian, Tt> = From::from(instant);
+        assert_eq!(dt, DateTime::<Gregorian, Tt>::new(2200, 1, 2, 12, 0, 0, 0).unwrap());
         let check: Instant = From::from(dt);
         assert_eq!(instant, check);
 
+
         let instant = Epoch::Unix.as_instant();
-        let dt: DateTime<Gregorian> = From::from(instant);
-        // the reason this is off is due to the conversion between Tt and Utc. FIXME (use UTC and zero this)
-        assert_eq!(dt, DateTime::<Gregorian>::new(1970, 1, 1, 0, 0, 41, 184_000_000_000_000_000).unwrap());
+        let dt: DateTime<Gregorian, Tt> = From::from(instant);
+        // The reason this is off is due to the conversion between Tt and Utc. FIXME (use UTC and zero this)
+        assert_eq!(dt, DateTime::<Gregorian, Tt>::new(1970, 1, 1, 0, 0, 41, 184_000_000_000_000_000).unwrap());
         let check: Instant = From::from(dt);
         assert_eq!(instant, check);
 
         let instant = Epoch::Y2k.as_instant();
-        let dt: DateTime<Gregorian> = From::from(instant);
+        let dt: DateTime<Gregorian, Tt> = From::from(instant);
         // the reason this is off is due to the conversion between Tt and Utc. FIXME (use UTC and zero this)
-        assert_eq!(dt, DateTime::<Gregorian>::new(2000, 1, 1, 0, 1, 4, 184_000_000_000_000_000).unwrap());
+        assert_eq!(dt, DateTime::<Gregorian, Tt>::new(2000, 1, 1, 0, 1, 4, 184_000_000_000_000_000).unwrap());
         let check: Instant = From::from(dt);
         assert_eq!(instant, check);
 
         let instant = Epoch::TimeStandard.as_instant();
-        let dt: DateTime<Gregorian> = From::from(instant);
-        assert_eq!(dt, DateTime::<Gregorian>::new(1977, 1, 1, 0, 0, 32, 184_000_000_000_000_000).unwrap());
+        let dt: DateTime<Gregorian, Tt> = From::from(instant);
+        assert_eq!(dt, DateTime::<Gregorian, Tt>::new(1977, 1, 1, 0, 0, 32, 184_000_000_000_000_000).unwrap());
         let check: Instant = From::from(dt);
         assert_eq!(instant, check);
     }

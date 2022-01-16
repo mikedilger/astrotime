@@ -6,6 +6,7 @@ use crate::date_time::DateTime;
 use crate::duration::Duration;
 use crate::error::Error;
 use crate::epoch::Epoch;
+use crate::standard::Standard;
 
 /// An `Instant` is a precise moment in time according to a particular time `Standard`.
 ///
@@ -137,8 +138,10 @@ impl Sub<Self> for Instant {
     }
 }
 
-impl<C: Calendar> From<Instant> for DateTime<C> {
+impl<C: Calendar, S: Standard> From<Instant> for DateTime<C, S> {
     fn from(i: Instant) -> Self {
+        // FIXME: This does NOT convert between Tt and S yet
+
         // NOTE: if we ever move the epoch that Durations are based on
         //       away from TimeStandard, then replace `C::epoch()` below
         //       with `C::epoch() - Epoch::TimeStandard.as_instant()`
@@ -146,12 +149,18 @@ impl<C: Calendar> From<Instant> for DateTime<C> {
     }
 }
 
-impl<C: Calendar> From<DateTime<C>> for Instant {
-    fn from(dt: DateTime<C>) -> Self {
+impl<C: Calendar, S: Standard> From<DateTime<C, S>> for Instant {
+    fn from(dt: DateTime<C, S>) -> Self {
+        // FIXME: This does NOT convert between Tt and S yet
+
         // NOTE: if we ever move the epoch that Durations are based on
         //       away from TimeStandard, then replace `C::epoch()` below
         //       with `C::epoch() - Epoch::TimeStandard.as_instant()`
-        Self(dt.duration_from_epoch() + C::epoch().0)
+        let abnormal_instant = dt.duration_from_epoch() + C::epoch().0;
+
+        // CONVERT abnormal_instant in S to instant in Tt
+
+        Self(abnormal_instant)
     }
 }
 
