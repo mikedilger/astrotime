@@ -140,34 +140,35 @@ impl Sub<Self> for Instant {
 
 impl<C: Calendar, S: Standard> From<Instant> for DateTime<C, S> {
     fn from(i: Instant) -> Self {
-        // FIXME: This does NOT convert between Tt and S yet
+        // Conversion between time standards
+        let i_abnormal = S::from_tt(i);
 
         // NOTE: if we ever move the epoch that Durations are based on
         //       away from TimeStandard, then replace `C::epoch()` below
         //       with `C::epoch() - Epoch::TimeStandard.as_instant()`
-        Self::from_duration_from_epoch(i.0 - C::epoch().0)
+        Self::from_duration_from_epoch(i_abnormal.0 - C::epoch().0)
     }
 }
 
 impl<C: Calendar, S: Standard> From<DateTime<C, S>> for Instant {
     fn from(dt: DateTime<C, S>) -> Self {
-        // FIXME: This does NOT convert between Tt and S yet
-
         // NOTE: if we ever move the epoch that Durations are based on
         //       away from TimeStandard, then replace `C::epoch()` below
         //       with `C::epoch() - Epoch::TimeStandard.as_instant()`
-        let abnormal_instant = dt.duration_from_epoch() + C::epoch().0;
+        let i_abnormal = Self(dt.duration_from_epoch() + C::epoch().0);
 
-        // CONVERT abnormal_instant in S to instant in Tt
-
-        Self(abnormal_instant)
+        // Conversion between time standards
+        S::to_tt(i_abnormal)
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::Instant;
+    use crate::calendar::Gregorian;
+    use crate::date_time::DateTime;
     use crate::epoch::Epoch;
+    use crate::standard::{Utc, Tai, Tt, Tcb};
 
     #[test]
     fn test_instant_julian_day_conversions() {
@@ -205,6 +206,7 @@ mod test {
             Instant::from_julian_day_parts(2524595, 0.0),
             Epoch::J2200_0.as_instant()
         );
+
         assert_eq!(
             Instant::from_julian_day_precise(2440587, 43200 + 41, 184_000_000_000_000_000)
                 .unwrap(),
@@ -215,10 +217,50 @@ mod test {
                 .unwrap(),
             Epoch::Y2k.as_instant()
         );
+
         assert_eq!(
             Instant::from_julian_day_precise(2443144, 43200 + 32, 184_000_000_000_000_000)
                 .unwrap(),
             Epoch::TimeStandard.as_instant()
         );
+    }
+
+    #[test]
+    fn test_time_standard_conversions() {
+        crate::setup_logging();
+
+        let p: Instant = From::from( DateTime::<Gregorian, Tai>::new(1993, 6, 30, 0, 0, 27, 0).unwrap());
+        let q: DateTime<Gregorian, Utc> = From::from(p);
+        assert_eq!(q,
+                   DateTime::<Gregorian, Utc>::new(1993, 6, 30, 0, 0, 0, 0).unwrap());
+
+        let p: Instant = Epoch::Unix.as_instant();
+        let q: DateTime<Gregorian, Utc> = From::from(p);
+        assert_eq!(q,
+                   DateTime::<Gregorian, Utc>::new(1970, 1, 1, 0, 0, 0, 0).unwrap());
+
+        let y2k: Instant = Epoch::Y2k.as_instant();
+        let q: DateTime<Gregorian, Utc> = From::from(y2k);
+        assert_eq!(q,
+                   DateTime::<Gregorian, Utc>::new(2000, 1, 1, 0, 0, 0, 0).unwrap());
+
+        // Y2k converted into TCB will go through multiple conversions:
+        //   32 leap seconds
+        //   32.184 offset from TT
+        //   11 seconds and 252945542335510240 attoseconds SKEW of TCB
+        // FIXME with approx_eq
+        let tcb: DateTime<Gregorian, Tcb> = From::from(y2k);
+        assert_eq!(tcb,
+                   DateTime::<Gregorian, Tcb>::new_abnormal(2000, 1, 1, 0, 0, 32 + 32 + 11,
+                                                            184_000_000_000_000_000 +
+                                                            252_945_542_335_510_240));
+
+        // This is much more straightforward
+        // FIXME with approx_eq
+        let y2ktt: Instant = From::from( DateTime::<Gregorian, Tt>::new(2000, 1, 1, 0,0,0,0).unwrap());
+        let tcb: DateTime<Gregorian, Tcb> = From::from(y2ktt);
+        assert_eq!(tcb,
+                   DateTime::<Gregorian, Tcb>::new_abnormal(2000, 1, 1, 0, 0, 11,
+                                                            252944482104024992));
     }
 }

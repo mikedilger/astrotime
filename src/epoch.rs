@@ -120,7 +120,7 @@ mod test {
     use crate::calendar::{Julian, Gregorian};
     use crate::date_time::DateTime;
     use crate::instant::Instant;
-    use crate::standard::Tt;
+    use crate::standard::{Tt, Utc};
 
     #[test]
     fn check_epochs_and_conversion() {
@@ -182,16 +182,14 @@ mod test {
 
 
         let instant = Epoch::Unix.as_instant();
-        let dt: DateTime<Gregorian, Tt> = From::from(instant);
-        // The reason this is off is due to the conversion between Tt and Utc. FIXME (use UTC and zero this)
-        assert_eq!(dt, DateTime::<Gregorian, Tt>::new(1970, 1, 1, 0, 0, 41, 184_000_000_000_000_000).unwrap());
+        let dt: DateTime<Gregorian, Utc> = From::from(instant);
+        assert_eq!(dt, DateTime::<Gregorian, Utc>::new(1970, 1, 1, 0, 0, 0, 0).unwrap());
         let check: Instant = From::from(dt);
         assert_eq!(instant, check);
 
         let instant = Epoch::Y2k.as_instant();
-        let dt: DateTime<Gregorian, Tt> = From::from(instant);
-        // the reason this is off is due to the conversion between Tt and Utc. FIXME (use UTC and zero this)
-        assert_eq!(dt, DateTime::<Gregorian, Tt>::new(2000, 1, 1, 0, 1, 4, 184_000_000_000_000_000).unwrap());
+        let dt: DateTime<Gregorian, Utc> = From::from(instant);
+        assert_eq!(dt, DateTime::<Gregorian, Utc>::new(2000, 1, 1, 0, 0, 0, 0).unwrap());
         let check: Instant = From::from(dt);
         assert_eq!(instant, check);
 
@@ -214,13 +212,10 @@ mod test {
         assert_eq!(Epoch::J2000_0.as_instant().as_julian_day_formatted(), "JD 2451545");
         assert_eq!(Epoch::J2100_0.as_instant().as_julian_day_formatted(), "JD 2488070");
         assert_eq!(Epoch::J2200_0.as_instant().as_julian_day_formatted(), "JD 2524595");
-
-        // FIXME - this isn't right because UTC is not TT
+        // This is slightly off from TT midnight because of the TT/UTC conversion
         assert_eq!(Epoch::Unix.as_instant().as_julian_day_formatted(), "JD 2440587.5004766666666667");
-
-        // FIXME - this isn't right because UTC is not TT
+        // This is slightly off from TT midnight because of the TT/UTC conversion
         assert_eq!(Epoch::Y2k.as_instant().as_julian_day_formatted(), "JD 2451544.5007428703703704");
-
         assert_eq!(Epoch::TimeStandard.as_instant().as_julian_day_formatted(), "JD 2443144.5003725");
     }
 
