@@ -21,8 +21,14 @@ pub use date_time::DateTime;
 mod duration;
 pub use duration::Duration;
 
+mod epoch;
+pub use epoch::Epoch;
+
 mod error;
 pub use error::Error;
+
+mod instant;
+pub use instant::Instant;
 
 mod standard;
 pub use standard::{Standard, Tt, Tcg, Tcb, Tai, Utc};

@@ -1,5 +1,7 @@
 
 use crate::error::Error;
+use crate::epoch::Epoch;
+use crate::instant::Instant;
 
 /// This specifies traditional Calendar settings that use the traditional 12 months
 /// and have leap years. This is implemented for `Gregorian` and `Julian`. It does
@@ -22,6 +24,16 @@ pub trait Calendar {
             "Gregorian"
         } else {
             "Julian"
+        }
+    }
+
+    /// Epoch this calendar starts from
+    #[must_use]
+    fn epoch() -> Instant {
+        if <Self as Calendar>::is_gregorian() {
+            Epoch::GregorianCalendar.as_instant()
+        } else {
+            Epoch::JulianCalendar.as_instant()
         }
     }
 

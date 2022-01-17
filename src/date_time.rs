@@ -45,6 +45,11 @@ use crate::error::Error;
 /// The oldest date representable is `-2147483648-01-01 00:00:00.000000000000000000`
 ///
 /// The newest date representable is `2147483647-12-31 23:59:59.999999999999999999`
+///
+/// Internally this is stored in a packed format and is 128 bits in size.
+///
+/// This represents the same thing that an `Instant` does, but it makes `Calendar` data
+/// easier to work with, and has such date precomputed and packed within.
 #[derive(Clone, Copy)] // is also Send
 pub struct DateTime<T: Calendar> {
     packed: u64,
