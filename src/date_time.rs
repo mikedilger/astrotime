@@ -291,8 +291,6 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     pub fn from_day_number_and_fraction(day_number: i64, day_fraction: f64)
                                         -> Result<Self, Error>
     {
-        use crate::divmod_i64;
-
         if day_fraction<0.0 { return Err(Error::RangeError); }
         if day_fraction>=1.0 { return Err(Error::RangeError); }
 
