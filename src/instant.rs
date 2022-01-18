@@ -172,7 +172,7 @@ mod test {
     use crate::calendar::Gregorian;
     use crate::date_time::DateTime;
     use crate::epoch::Epoch;
-    use crate::standard::{Utc, Tai, Tt, Tcb};
+    use crate::standard::{Utc, Tai, Tcb};
 
     #[test]
     fn test_instant_julian_day_conversions() {
@@ -254,17 +254,10 @@ mod test {
         //   11 seconds and 252945542335510240 attoseconds SKEW of TCB
         // FIXME with approx_eq
         let tcb: DateTime<Gregorian, Tcb> = From::from(y2k);
-        assert_eq!(tcb,
-                   DateTime::<Gregorian, Tcb>::new_abnormal(2000, 1, 1, 0, 0, 32 + 32 + 11,
-                                                            184_000_000_000_000_000 +
-                                                            252_945_542_335_510_240));
-
-        // This is much more straightforward
-        // FIXME with approx_eq
-        let y2ktt: Instant = From::from( DateTime::<Gregorian, Tt>::new(2000, 1, 1, 0,0,0,0).unwrap());
-        let tcb: DateTime<Gregorian, Tcb> = From::from(y2ktt);
-        assert_eq!(tcb,
-                   DateTime::<Gregorian, Tcb>::new_abnormal(2000, 1, 1, 0, 0, 11,
-                                                            252944482104024992));
+        let diff = tcb -
+            DateTime::<Gregorian, Tcb>::new_abnormal(2000, 1, 1, 0, 0, 32 + 32 + 11,
+                                                     184_000_000_000_000_000 +
+                                                     252_945_900_000_000_000);
+        assert!(diff.attos.abs() < 40_000_000);
     }
 }

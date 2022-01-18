@@ -61,11 +61,11 @@ impl Standard for Tcg {
     }
 
     fn to_tt(at: Instant) -> Instant {
-        Instant(at.0 * (1.0 / (1.0 + TCG_FACTOR)))
+        Instant(at.0 * (1.0 - TCG_FACTOR))
     }
 
     fn from_tt(at: Instant) -> Instant {
-        Instant(at.0 * (1.0 + TCG_FACTOR))
+        Instant(at.0 * (1.0 / (1.0 - TCG_FACTOR)))
     }
 }
 impl Continuous for Tcg { }
@@ -84,11 +84,11 @@ impl Standard for Tcb {
     }
 
     fn to_tt(at: Instant) -> Instant {
-        Instant(at.0 * (1.0 / (1.0 + TCB_FACTOR)))
+        Instant(at.0 * (1.0 - TCB_FACTOR))
     }
 
     fn from_tt(at: Instant) -> Instant {
-        Instant(at.0 * (1.0 + TCB_FACTOR))
+        Instant(at.0 * (1.0 / (1.0 - TCB_FACTOR)))
     }
 }
 impl Continuous for Tcb { }
