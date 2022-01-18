@@ -3,6 +3,9 @@ use crate::error::Error;
 use crate::epoch::Epoch;
 use crate::instant::Instant;
 
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
+
 /// This specifies traditional Calendar settings that use the traditional 12 months
 /// and have leap years. This is implemented for `Gregorian` and `Julian`. It does
 /// not handle more esoteric calendars.
@@ -207,6 +210,7 @@ pub trait Calendar {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct Julian;
 
 impl Calendar for Julian {
@@ -216,6 +220,7 @@ impl Calendar for Julian {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct Gregorian;
 
 impl Calendar for Gregorian {

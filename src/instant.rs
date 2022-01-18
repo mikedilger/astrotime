@@ -1,6 +1,9 @@
 
 use std::ops::{Add, Sub};
 
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
+
 use crate::calendar::Calendar;
 use crate::date_time::DateTime;
 use crate::duration::Duration;
@@ -22,6 +25,7 @@ use crate::standard::Standard;
 // January 1st, 1977 CE gregorian, 00:00:32.184 Tt
 // which is identical in TT, TCG, and TCB
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct Instant(pub(crate) Duration);
 
 impl Instant {

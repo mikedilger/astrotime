@@ -2,6 +2,9 @@
 use std::ops::{Neg, Add, Sub, Mul};
 use std::fmt;
 
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
+
 /// Duration is an interval of time
 ///
 /// Durations can handle lengths of time about 40 times as long as the age of the
@@ -11,6 +14,7 @@ use std::fmt;
 ///
 /// Stored in 128 bits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct Duration {
     pub(crate) secs: i64,
 

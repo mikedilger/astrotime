@@ -10,8 +10,12 @@ repository = "https://github.com/mikedilger/astrotime"
 keywords = [ "time", "date" ]
 categories = [ "date-and-time" ]
 
+[features]
+default = []
+
 [dependencies]
 log = "0.4"
+serde = { version = "1.0", default-features = false, features = [ "derive" ], optional = true }
 
 [dev-dependencies]
 pretty_env_logger = "0.4"

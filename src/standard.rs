@@ -1,6 +1,9 @@
 
 use std::fmt::Debug;
 
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
+
 use crate::duration::Duration;
 use crate::instant::Instant;
 
@@ -27,6 +30,7 @@ pub trait Continuous { }
 /// This is a continuous time standard for the surface of the Earth (Earth's geoid)
 /// See [Wikipedia](https://en.wikipedia.org/wiki/Terrestrial_Time)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct Tt;
 impl Standard for Tt {
     fn abbrev() -> &'static str {
@@ -48,6 +52,7 @@ impl Continuous for Tt { }
 /// This is a continuous time standard for satellites that orbit the Earth
 /// See [Wikipedia](https://en.wikipedia.org/wiki/Geocentric_Coordinate_Time)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct Tcg;
 impl Standard for Tcg {
 
@@ -70,6 +75,7 @@ impl Continuous for Tcg { }
 /// This is a continuous time standard for satellites that orbit the Sun
 /// See [Wikipedia](https://en.wikipedia.org/wiki/Barycentric_Coordinate_Time)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct Tcb;
 impl Standard for Tcb {
 
@@ -92,6 +98,7 @@ impl Continuous for Tcb { }
 /// This is a continuous time standard for the surface of the Earth (Earth's geoid)
 /// realized via atomic clocks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct Tai;
 impl Standard for Tai {
     fn abbrev() -> &'static str {
@@ -113,6 +120,7 @@ impl Continuous for Tai { }
 /// This is civil time as usually reported.  It is discontinuous, having leap
 /// seconds inserted from time to time based on the Earth's rotation
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct Utc;
 impl Standard for Utc {
     fn abbrev() -> &'static str {

@@ -6,6 +6,9 @@ use std::marker::PhantomData;
 use std::ops::{Add, Sub};
 use std::convert::TryFrom;
 
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
+
 use crate::calendar::{Calendar, Julian, Gregorian};
 use crate::duration::Duration;
 use crate::error::Error;
@@ -49,6 +52,7 @@ use crate::standard::Standard;
 /// This represents the same thing that an `Instant` does, but it makes `Calendar` data
 /// easier to work with, and has such date precomputed and packed within.
 #[derive(Clone, Copy)] // is also Send
+#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct DateTime<C: Calendar, S: Standard> {
     packed: u64,
     attos: u64,
