@@ -1,4 +1,5 @@
 
+use std::convert::TryFrom;
 use std::ops::{Add, Sub};
 
 #[cfg(feature = "serde")]
@@ -163,6 +164,45 @@ impl<C: Calendar, S: Standard> From<DateTime<C, S>> for Instant {
 
         // Conversion between time standards
         S::to_tt(i_abnormal)
+    }
+}
+
+impl TryFrom<std::time::SystemTime> for Instant {
+    type Error = Error;
+
+    fn try_from(s: std::time::SystemTime) -> Result<Self, Self::Error> {
+
+        // NOTE: std::time::SystemTime, like UNIX, lies about UTC times
+        //       in the past that cross leap seconds. When we compute the
+        //       duration_since(UNIX_EPOCH), we get a number that is short
+        //       by the total number of leap seconds that have occured.
+        //       We correct for this below.
+
+        let since_unix_epoch_less_leaps: Duration =
+            match s.duration_since(std::time::UNIX_EPOCH)
+        {
+            Ok(std_dur) => TryFrom::try_from(std_dur)?,
+            Err(std_time_error) => {
+                // we can handle negative durations ;-P
+                let d: Duration = TryFrom::try_from(std_time_error.duration())?;
+                -d
+            }
+        };
+
+        let time_less_leaps = Epoch::Unix.as_instant() + since_unix_epoch_less_leaps;
+
+        // Add the missing leap seconds in two passes
+        let leap_seconds_elapsed_try1 = crate::standard::leap_seconds_elapsed(time_less_leaps);
+        let time_maybe_missing_one_leap = time_less_leaps + Duration::new(leap_seconds_elapsed_try1, 0);
+
+        // Check that we didn't hit another leap second in the process
+        let leap_seconds_elapsed_try2 = crate::standard::leap_seconds_elapsed(time_maybe_missing_one_leap);
+
+        Ok(if leap_seconds_elapsed_try2 >leap_seconds_elapsed_try1 {
+            time_maybe_missing_one_leap + Duration::new(1,0)
+        } else {
+            time_maybe_missing_one_leap
+        })
     }
 }
 
