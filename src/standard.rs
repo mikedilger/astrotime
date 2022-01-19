@@ -29,6 +29,9 @@ pub trait Continuous { }
 ///
 /// This is a continuous time standard for the surface of the Earth (Earth's geoid)
 /// See [Wikipedia](https://en.wikipedia.org/wiki/Terrestrial_Time)
+///
+/// This type is proleptic. TT was defined in 1976, and changed in 2000 very slightly.
+/// All dates before this extrapolate backwards.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct Tt;
@@ -51,6 +54,10 @@ impl Continuous for Tt { }
 ///
 /// This is a continuous time standard for satellites that orbit the Earth
 /// See [Wikipedia](https://en.wikipedia.org/wiki/Geocentric_Coordinate_Time)
+///
+/// This type is proleptic. It was defined in 1991, to extrapolate back to
+/// January 1, 1977 at 00:00:32.184 TT where it syncronizes with TT.  All
+/// dates before this continue to extrapolate back.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct Tcg;
@@ -74,6 +81,10 @@ impl Continuous for Tcg { }
 ///
 /// This is a continuous time standard for satellites that orbit the Sun
 /// See [Wikipedia](https://en.wikipedia.org/wiki/Barycentric_Coordinate_Time)
+///
+/// This type is proleptic. It was defined in 1991, to extrapolate back to
+/// January 1, 1977 at 00:00:32.184 TT where it syncronizes with TT.  All
+/// dates before this continue to extrapolate back.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct Tcb;
@@ -97,6 +108,9 @@ impl Continuous for Tcb { }
 ///
 /// This is a continuous time standard for the surface of the Earth (Earth's geoid)
 /// realized via atomic clocks.
+///
+/// This type is proleptic. TAI started on 1 January 1958, but we represent all dates
+/// before this as if TAI extends backwards.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct Tai;
@@ -118,7 +132,15 @@ impl Continuous for Tai { }
 /// Universal Coordinated Time
 ///
 /// This is civil time as usually reported.  It is discontinuous, having leap
-/// seconds inserted from time to time based on the Earth's rotation
+/// seconds inserted from time to time based on the Earth's rotation.
+///
+/// This type is proleptic. For all dates prior to 1 Jan 1972, we presume
+/// 9 leap seconds have elapsed, offsetting from TAI permanently by 9 seconds,
+/// even though that's not what happened at the time (what happened at the time
+/// was that UTC wasn't syncronized to TAI by integer leap seconds, but rather
+/// to other time sources and contained fractional leap seconds which are hard
+/// to reconstruct or even get a list of).  For all dates prior to 1 January
+/// 1960, UTC didn't exist, but we pretend it did, offset 9 seconds from TAI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct Utc;
