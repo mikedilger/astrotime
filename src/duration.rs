@@ -1,4 +1,5 @@
 
+use std::convert::TryFrom;
 use std::ops::{Neg, Add, Sub, Mul};
 use std::fmt;
 
@@ -179,6 +180,23 @@ impl Mul<f64> for Duration {
         };
         d.normalize();
         d
+    }
+}
+
+impl TryFrom<std::time::Duration> for Duration {
+    type Error = crate::error::Error;
+
+    #[allow(clippy::cast_lossless)]
+    #[allow(clippy::cast_possible_wrap)]
+    fn try_from(d: std::time::Duration) -> Result<Self, Self::Error> {
+        if d.as_secs() > i64::MAX as u64 {
+            // Duration will not fit! (and is ridiculously long)
+            return Err(crate::error::Error::RangeError);
+        }
+        Ok(Self {
+            secs: d.as_secs() as i64,
+            attos: d.subsec_nanos() as i64 * 1_000_000_000
+        })
     }
 }
 
