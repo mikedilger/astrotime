@@ -217,8 +217,11 @@ fn leap_seconds() -> Vec<i64> {
 pub fn leap_seconds_elapsed(at: Instant) -> i64 {
     use crate::epoch::Epoch;
 
-    let cmp = at + (Epoch::TimeStandard.as_instant() - Epoch::E1900_0.as_instant());
-    let secs = cmp.0.seconds_part();
+    // NOTE: if our instants ever differ from TimeStandard, we need to run this
+    // instead:
+    // let cmp = at + (Epoch::TimeStandard.as_instant() - Epoch::E1900_0.as_instant());
+    let cmp = at - Epoch::E1900_0.as_instant();
+    let secs = cmp.seconds_part();
 
     trace!("Comparing seconds {} to leap second list", secs);
 
