@@ -146,12 +146,12 @@ impl Sub<Self> for Instant {
 impl<C: Calendar, S: Standard> From<Instant> for DateTime<C, S> {
     fn from(i: Instant) -> Self {
         // Conversion between time standards
-        let i_abnormal = S::from_tt(i);
+        let dur: Duration = S::from_tt(i.0);
 
         // NOTE: if we ever move the epoch that Durations are based on
         //       away from TimeStandard, then replace `C::epoch()` below
         //       with `C::epoch() - Epoch::TimeStandard.as_instant()`
-        Self::from_duration_from_epoch(i_abnormal.0 - C::epoch().0)
+        Self::from_duration_from_epoch(dur - C::epoch().0)
     }
 }
 
@@ -160,10 +160,10 @@ impl<C: Calendar, S: Standard> From<DateTime<C, S>> for Instant {
         // NOTE: if we ever move the epoch that Durations are based on
         //       away from TimeStandard, then replace `C::epoch()` below
         //       with `C::epoch() - Epoch::TimeStandard.as_instant()`
-        let i_abnormal = Self(dt.duration_from_epoch() + C::epoch().0);
+        let dur: Duration = dt.duration_from_epoch() + C::epoch().0;
 
         // Conversion between time standards
-        S::to_tt(i_abnormal)
+        Self(S::to_tt(dur))
     }
 }
 

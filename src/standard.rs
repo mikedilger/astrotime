@@ -15,11 +15,25 @@ pub trait Standard: Debug + Sized + Clone {
     /// Short capital-letter abbreviation for the time standard (usually 2 or 3 letters)
     fn abbrev() -> &'static str;
 
-    /// Convert the given abnormal `Instant` `at` into an `Instant` using TT.
-    fn to_tt(at: Instant) -> Instant;
+    /// This function is not meant to be called from outside the library.
+    ///
+    /// But if you wish to create a new Standard that implements this trait, you'll need
+    /// to know how to do so.
+    ///
+    /// It takes a `Duration` from January 1st, 1977 CE gregorian, 00:00:32.184
+    /// as defined by this `Standard` and converts it to a Duration from January 1st, 1977 CE
+    /// gregorian, 00:00:32.184 TT.
+    fn to_tt(dur: Duration) -> Duration;
 
-    /// Convert the given `Instant` `at` into an abnormal `Instant` using `S`
-    fn from_tt(at: Instant) -> Instant;
+    /// This function is not meant to be called from outside the library.
+    ///
+    /// But if you wish to create a new Standard that implements this trait, you'll need
+    /// to know how to do so.
+    ///
+    /// It takes a `Duration` from January 1st, 1977 CE gregorian, 00:00:32.184 TT
+    /// and converts it to a `Duration` from January 1st, 1977 CE gregorian, 00:00:32.184
+    /// as defined by this `Standard`.
+    fn from_tt(dur: Duration) -> Duration;
 }
 
 /// Whether a Standard is Continuous or not
@@ -40,12 +54,12 @@ impl Standard for Tt {
         "TT"
     }
 
-    fn to_tt(at: Instant) -> Instant {
-        at
+    fn to_tt(dur: Duration) -> Duration {
+        dur
     }
 
-    fn from_tt(at: Instant) -> Instant {
-        at
+    fn from_tt(dur: Duration) -> Duration {
+        dur
     }
 }
 impl Continuous for Tt { }
@@ -67,12 +81,12 @@ impl Standard for Tcg {
         "TCG"
     }
 
-    fn to_tt(at: Instant) -> Instant {
-        Instant(at.0 * (1.0 - TCG_FACTOR))
+    fn to_tt(dur: Duration) -> Duration {
+        dur * (1.0 - TCG_FACTOR)
     }
 
-    fn from_tt(at: Instant) -> Instant {
-        Instant(at.0 * (1.0 / (1.0 - TCG_FACTOR)))
+    fn from_tt(dur: Duration) -> Duration {
+        dur * (1.0 / (1.0 - TCG_FACTOR))
     }
 }
 impl Continuous for Tcg { }
@@ -94,12 +108,12 @@ impl Standard for Tcb {
         "TCB"
     }
 
-    fn to_tt(at: Instant) -> Instant {
-        Instant(at.0 * (1.0 - TCB_FACTOR))
+    fn to_tt(dur: Duration) -> Duration {
+        dur * (1.0 - TCB_FACTOR)
     }
 
-    fn from_tt(at: Instant) -> Instant {
-        Instant(at.0 * (1.0 / (1.0 - TCB_FACTOR)))
+    fn from_tt(dur: Duration) -> Duration {
+        dur * (1.0 / (1.0 - TCB_FACTOR))
     }
 }
 impl Continuous for Tcb { }
@@ -119,12 +133,12 @@ impl Standard for Tai {
         "TAI"
     }
 
-    fn to_tt(at: Instant) -> Instant {
-        at + Duration::new(32, 184_000_000_000_000_000)
+    fn to_tt(dur: Duration) -> Duration {
+        dur + Duration::new(32, 184_000_000_000_000_000)
     }
 
-    fn from_tt(at: Instant) -> Instant {
-        at - Duration::new(32, 184_000_000_000_000_000)
+    fn from_tt(dur: Duration) -> Duration {
+        dur - Duration::new(32, 184_000_000_000_000_000)
     }
 }
 impl Continuous for Tai { }
@@ -149,16 +163,16 @@ impl Standard for Utc {
         "UTC"
     }
 
-    fn to_tt(at: Instant) -> Instant {
-        Tai::to_tt(at)
+    fn to_tt(dur: Duration) -> Duration {
+        Tai::to_tt(dur)
             + Duration::new(9, 0) // 9 leaps before 1972
-            + Duration::new(leap_seconds_elapsed(at), 0) // leaps from 1972 - at
+            + Duration::new(leap_seconds_elapsed(Instant(dur)), 0) // leaps on or after 1972
     }
 
-    fn from_tt(at: Instant) -> Instant {
-        Tai::from_tt(at)
+    fn from_tt(dur: Duration) -> Duration {
+        Tai::from_tt(dur)
             - Duration::new(9, 0) // 9 leaps before 1972
-            - Duration::new(leap_seconds_elapsed(at), 0) // leaps from 1972 - at
+            - Duration::new(leap_seconds_elapsed(Instant(dur)), 0) // leaps on or after 1972
     }
 }
 
@@ -226,7 +240,7 @@ mod test {
     fn test_to_from_tt() {
         crate::setup_logging();
 
-        let i = Instant(Duration { secs: 21_309_887, attos: 214_892_349_872_398_743 });
+        let i = Duration { secs: 21_309_887, attos: 214_892_349_872_398_743 };
 
         let j = Tai::to_tt(Tai::from_tt(i));
         assert_eq!(i, j);
@@ -235,9 +249,9 @@ mod test {
         assert_eq!(i, j);
 
         let j = Tcg::to_tt(Tcg::from_tt(i));
-        assert_eq!(i.0.secs, j.0.secs);
-        assert!(i.0.attos - j.0.attos < 10400000);
-        assert!(i.0.attos - j.0.attos > -10400000);
+        assert_eq!(i.secs, j.secs);
+        assert!(i.attos - j.attos < 10400000);
+        assert!(i.attos - j.attos > -10400000);
     }
 
     #[test]
