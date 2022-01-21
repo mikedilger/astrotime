@@ -166,7 +166,7 @@ impl Standard for Utc {
     fn to_tt(dur: Duration) -> Duration {
         Tai::to_tt(dur)
             + Duration::new(9, 0) // 9 leaps before 1972
-            + Duration::new(leap_seconds_elapsed(Instant(dur)), 0) // leaps on or after 1972
+            + Duration::new(leap_seconds_elapsed_for_utc(dur), 0) // leaps on or after 1972
     }
 
     fn from_tt(dur: Duration) -> Duration {
@@ -226,9 +226,29 @@ pub fn leap_seconds_elapsed(at: Instant) -> i64 {
     trace!("Comparing seconds {} to leap second list", secs);
 
     leap_seconds().iter().enumerate()
-        .find(|(_n,&leap)| secs <= leap)
+        .find(|(_n,&leap)| secs < leap)
         .map_or(leap_seconds().len(), |(n,_d)| n) as i64
 }
+
+// Similar to leap_seconds_elapsed(), but using an incorrect/unadjusted duration
+// computed using UTC as if there were no leap seconds. This function is for
+// converting from UTC to TAI.
+fn leap_seconds_elapsed_for_utc(mut unadjusted_dur: Duration) -> i64 {
+    use crate::epoch::Epoch;
+
+    // Adjust the UTC based duration as close to TT as we can (all but leaps)
+    unadjusted_dur = unadjusted_dur + Duration::new(9 + 32, 184_000_000_000_000_000);
+    let cmp = unadjusted_dur - Epoch::E1900_0.as_instant().0;
+    let secs = cmp.seconds_part();
+
+    trace!("Comparing seconds {} to leap second list (from UTC)", secs);
+
+    leap_seconds().iter().enumerate()
+        .map(|(n,leap)| (n,leap-n as i64)) // each leap successively drug backwards
+        .find(|(_n,leap)| secs < *leap)
+        .map_or(leap_seconds().len(), |(n,_d)| n) as i64
+}
+
 
 #[cfg(test)]
 mod test {
@@ -237,7 +257,7 @@ mod test {
     use crate::duration::Duration;
     use crate::calendar::Gregorian;
     use crate::instant::Instant;
-    use crate::standard::{Standard, Tai, Tcg, Utc};
+    use crate::standard::{Standard, Tt, Tai, Tcg, Utc};
 
     #[test]
     fn test_to_from_tt() {
@@ -250,6 +270,29 @@ mod test {
 
         let j = Utc::to_tt(Utc::from_tt(i));
         assert_eq!(i, j);
+
+        // Test UTC in the vacinity of a leap second (1 January 1999)
+        let leap_instant: Instant = From::from(
+            DateTime::<Gregorian, Tt>::new(1999, 1, 1, 0, 0, 0, 0).unwrap()
+                - Duration::new(32 + 32, 184_000_000_000_000_000)
+        );
+        for s in -100 .. 100 { // leap happens at s=65 or 66
+            // NOTE: we cannot possibly map in a lossy way to UTC and back again
+            //       without an error somewhere. 3124137577 repeats.  Which TT
+            //       second should it refer to?
+            //       So we skip that one nasty value of s
+            if s==65 { continue; }
+
+            // FIXME- the fact is that DateTime *SHOULD* have a :60 second
+            // so that we can differentiate them. But our from_tt()/to_tt()
+            // has lost such information. Perhaps we need to do conversions
+            // between DateTime objects instead of between Instants.
+
+            trace!("s={}", s);
+            let a = leap_instant + Duration::new(s, 0);
+            let b = Instant(Utc::to_tt(Utc::from_tt(a.0)));
+            assert_eq!(a,b);
+        }
 
         let j = Tcg::to_tt(Tcg::from_tt(i));
         assert_eq!(i.secs, j.secs);
