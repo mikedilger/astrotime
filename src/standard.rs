@@ -130,30 +130,21 @@ impl Standard for Utc {
     fn to_tt(at: Instant) -> Instant {
         Tai::to_tt(at)
             + Duration::new(9, 0) // 9 leaps before 1972
-            + Duration::new(leaps_at(at), 0) // leaps from 1972 - at
+            + Duration::new(leap_seconds_elapsed(at), 0) // leaps from 1972 - at
     }
 
     fn from_tt(at: Instant) -> Instant {
         Tai::from_tt(at)
             - Duration::new(9, 0) // 9 leaps before 1972
-            - Duration::new(leaps_at(at), 0) // leaps from 1972 - at
+            - Duration::new(leap_seconds_elapsed(at), 0) // leaps from 1972 - at
     }
 }
 
-// This returns how many leap seconds have passed.
-// (if the instant is inside of a leap second, that one does not get counted yet)
-fn leaps_at(at: Instant) -> i64 {
-    use crate::epoch::Epoch;
-
-    let cmp = at + (Epoch::TimeStandard.as_instant() - Epoch::E1900_0.as_instant());
-    let secs = cmp.0.seconds_part();
-
-    trace!("Comparing seconds {} to leap second list", secs);
-
-    // https://www.ietf.org/timezones/data/leap-seconds.list
-    // FIXME: fetch the list dynamically if the user allows
-    #[allow(clippy::unreadable_literal)]
-    let leaps: Vec<i64> = vec![
+// https://www.ietf.org/timezones/data/leap-seconds.list
+// FIXME: fetch the list dynamically if the user allows
+#[allow(clippy::unreadable_literal)]
+fn leap_seconds() -> Vec<i64> {
+    vec![
         2272060800, //	10	# 1 Jan 1972
         2287785600, //	11	# 1 Jul 1972
         2303683200, //	12	# 1 Jan 1973
@@ -182,16 +173,27 @@ fn leaps_at(at: Instant) -> i64 {
         3550089600, //	35	# 1 Jul 2012
         3644697600, //	36	# 1 Jul 2015
         3692217600, //	37	# 1 Jan 2017
-    ];
+    ]
+}
 
-    leaps.iter().enumerate()
+// This returns how many leap seconds have passed.
+// (if the instant is inside of a leap second, that one does not get counted yet)
+pub fn leap_seconds_elapsed(at: Instant) -> i64 {
+    use crate::epoch::Epoch;
+
+    let cmp = at + (Epoch::TimeStandard.as_instant() - Epoch::E1900_0.as_instant());
+    let secs = cmp.0.seconds_part();
+
+    trace!("Comparing seconds {} to leap second list", secs);
+
+    leap_seconds().iter().enumerate()
         .find(|(_n,&leap)| secs <= leap)
-        .map_or(leaps.len(), |(n,_d)| n) as i64
+        .map_or(leap_seconds().len(), |(n,_d)| n) as i64
 }
 
 #[cfg(test)]
 mod test {
-    use super::leaps_at;
+    use super::leap_seconds_elapsed;
     use crate::date_time::DateTime;
     use crate::duration::Duration;
     use crate::calendar::Gregorian;
@@ -217,27 +219,27 @@ mod test {
     }
 
     #[test]
-    fn test_leaps_at() {
+    fn test_leap_seconds_elapsed() {
         crate::setup_logging();
 
         // before any leaps
         let at: Instant = From::from(DateTime::<Gregorian, Utc>::new(1970, 9, 17, 13, 45, 18, 0).unwrap());
-        assert_eq!(leaps_at(at), 0);
+        assert_eq!(leap_seconds_elapsed(at), 0);
 
         // between leap 3 and 4
         let at: Instant = From::from(DateTime::<Gregorian, Utc>::new(1973, 9, 17, 13, 45, 18, 0).unwrap());
-        assert_eq!(leaps_at(at), 3);
+        assert_eq!(leap_seconds_elapsed(at), 3);
 
         // inside of leap second 4
         let at: Instant = From::from(DateTime::<Gregorian, Utc>::new(1973,12, 31, 0, 0, 60, 500_000_000_000_000_000).unwrap());
-        assert_eq!(leaps_at(at), 3);
+        assert_eq!(leap_seconds_elapsed(at), 3);
 
         // after leap second 4
         let at: Instant = From::from(DateTime::<Gregorian, Utc>::new(1974, 1, 1, 0, 0, 0, 500_000_000_000_000_000).unwrap());
-        assert_eq!(leaps_at(at), 4);
+        assert_eq!(leap_seconds_elapsed(at), 4);
 
         // after all leaps
         let at: Instant = From::from(DateTime::<Gregorian, Utc>::new(2019, 9, 17, 13, 45, 18, 0).unwrap());
-        assert_eq!(leaps_at(at), 28);
+        assert_eq!(leap_seconds_elapsed(at), 28);
     }
 }
