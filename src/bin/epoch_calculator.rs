@@ -1,10 +1,10 @@
-
 use astrotime::*;
 
 fn main() {
     // let zero_point = DateTime::<Julian, Tt>::new_bc(4713, 1, 1, 12, 0, 0, 0).unwrap();
-    let zero_point_greg = DateTime::<Gregorian, Tt>::new(1977, 1, 1, 0, 0, 32, 184_000_000_000_000_000).unwrap();
-    let zero_point: DateTime::<Julian, Tt> = TryFrom::try_from(zero_point_greg).unwrap();
+    let zero_point_greg =
+        DateTime::<Gregorian, Tt>::new(1977, 1, 1, 0, 0, 32, 184_000_000_000_000_000).unwrap();
+    let zero_point: DateTime<Julian, Tt> = TryFrom::try_from(zero_point_greg).unwrap();
 
     // ----------------------------------------------------
     let julian_epoch = {
@@ -52,7 +52,8 @@ fn main() {
 
     // ----------------------------------------------------
     let ts = {
-        let e = DateTime::<Gregorian, Tt>::new(1977, 1, 1, 0, 0, 32, 184_000_000_000_000_000).unwrap();
+        let e =
+            DateTime::<Gregorian, Tt>::new(1977, 1, 1, 0, 0, 32, 184_000_000_000_000_000).unwrap();
         let e: DateTime<Julian, Tt> = TryFrom::try_from(e).unwrap();
         e - zero_point
     };
@@ -104,7 +105,6 @@ fn main() {
     println!("J2200.0: {:?}", j2200);
 
     // ----------------------------------------------------
-
 }
 
 /*

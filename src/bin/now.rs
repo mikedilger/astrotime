@@ -1,4 +1,4 @@
-use astrotime::{Instant, DateTime, Gregorian, Utc, Tai, Tt};
+use astrotime::{DateTime, Gregorian, Instant, Tai, Tt, Utc};
 
 fn main() {
     let now = std::time::SystemTime::now();

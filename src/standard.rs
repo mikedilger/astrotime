@@ -1,8 +1,7 @@
-
 use std::fmt::Debug;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::duration::Duration;
 use crate::instant::Instant;
@@ -34,7 +33,7 @@ pub trait Standard: Debug + Sized + Clone {
 }
 
 /// Whether a Standard is Continuous or not
-pub trait Continuous { }
+pub trait Continuous {}
 
 /// Terrestrial Time
 ///
@@ -44,7 +43,7 @@ pub trait Continuous { }
 /// This type is proleptic. TT was defined in 1976, and changed in 2000 very slightly.
 /// All dates before this extrapolate backwards.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Tt;
 impl Standard for Tt {
     fn abbrev() -> &'static str {
@@ -59,7 +58,7 @@ impl Standard for Tt {
         dur
     }
 }
-impl Continuous for Tt { }
+impl Continuous for Tt {}
 
 /// International Atomic Time
 ///
@@ -69,7 +68,7 @@ impl Continuous for Tt { }
 /// This type is proleptic. TAI started on 1 January 1958, but we represent all dates
 /// before this as if TAI extends backwards.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Tai;
 impl Standard for Tai {
     fn abbrev() -> &'static str {
@@ -84,7 +83,7 @@ impl Standard for Tai {
         dur - Duration::new(32, 184_000_000_000_000_000)
     }
 }
-impl Continuous for Tai { }
+impl Continuous for Tai {}
 
 /// Universal Coordinated Time
 ///
@@ -99,7 +98,7 @@ impl Continuous for Tai { }
 /// to reconstruct or even get a list of).  For all dates prior to 1 January
 /// 1960, UTC didn't exist, but we pretend it did, offset 9 seconds from TAI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Utc;
 impl Standard for Utc {
     fn abbrev() -> &'static str {
@@ -168,9 +167,11 @@ pub fn leap_seconds_elapsed(at: Instant) -> i64 {
 
     trace!("Comparing seconds {} to leap second list", secs);
 
-    leap_seconds().iter().enumerate()
-        .find(|(_n,&leap)| secs < leap)
-        .map_or(leap_seconds().len(), |(n,_d)| n) as i64
+    leap_seconds()
+        .iter()
+        .enumerate()
+        .find(|(_n, &leap)| secs < leap)
+        .map_or(leap_seconds().len(), |(n, _d)| n) as i64
 }
 
 // Similar to leap_seconds_elapsed(), but using an incorrect/unadjusted duration
@@ -186,27 +187,31 @@ fn leap_seconds_elapsed_for_utc(mut unadjusted_dur: Duration) -> i64 {
 
     trace!("Comparing seconds {} to leap second list (from UTC)", secs);
 
-    leap_seconds().iter().enumerate()
-        .map(|(n,leap)| (n,leap-n as i64)) // each leap successively drug backwards
-        .find(|(_n,leap)| secs < *leap)
-        .map_or(leap_seconds().len(), |(n,_d)| n) as i64
+    leap_seconds()
+        .iter()
+        .enumerate()
+        .map(|(n, leap)| (n, leap - n as i64)) // each leap successively drug backwards
+        .find(|(_n, leap)| secs < *leap)
+        .map_or(leap_seconds().len(), |(n, _d)| n) as i64
 }
-
 
 #[cfg(test)]
 mod test {
     use super::leap_seconds_elapsed;
+    use crate::calendar::Gregorian;
     use crate::date_time::DateTime;
     use crate::duration::Duration;
-    use crate::calendar::Gregorian;
     use crate::instant::Instant;
-    use crate::standard::{Standard, Tt, Tai, Utc};
+    use crate::standard::{Standard, Tai, Tt, Utc};
 
     #[test]
     fn test_to_from_tt() {
         crate::setup_logging();
 
-        let i = Duration { secs: 21_309_887, attos: 214_892_349_872_398_743 };
+        let i = Duration {
+            secs: 21_309_887,
+            attos: 214_892_349_872_398_743,
+        };
 
         let j = Tai::to_tt(Tai::from_tt(i));
         assert_eq!(i, j);
@@ -217,14 +222,17 @@ mod test {
         // Test UTC in the vacinity of a leap second (1 January 1999)
         let leap_instant: Instant = From::from(
             DateTime::<Gregorian, Tt>::new(1999, 1, 1, 0, 0, 0, 0).unwrap()
-                - Duration::new(32 + 32, 184_000_000_000_000_000)
+                - Duration::new(32 + 32, 184_000_000_000_000_000),
         );
-        for s in -100 .. 100 { // leap happens at s=65 or 66
+        for s in -100..100 {
+            // leap happens at s=65 or 66
             // NOTE: we cannot possibly map in a lossy way to UTC and back again
             //       without an error somewhere. 3124137577 repeats.  Which TT
             //       second should it refer to?
             //       So we skip that one nasty value of s
-            if s==65 { continue; }
+            if s == 65 {
+                continue;
+            }
 
             // FIXME- the fact is that DateTime *SHOULD* have a :60 second
             // so that we can differentiate them. But our from_tt()/to_tt()
@@ -234,7 +242,7 @@ mod test {
             trace!("s={}", s);
             let a = leap_instant + Duration::new(s, 0);
             let b = Instant(Utc::to_tt(Utc::from_tt(a.0)));
-            assert_eq!(a,b);
+            assert_eq!(a, b);
         }
     }
 
@@ -243,23 +251,31 @@ mod test {
         crate::setup_logging();
 
         // before any leaps
-        let at: Instant = From::from(DateTime::<Gregorian, Utc>::new(1970, 9, 17, 13, 45, 18, 0).unwrap());
+        let at: Instant =
+            From::from(DateTime::<Gregorian, Utc>::new(1970, 9, 17, 13, 45, 18, 0).unwrap());
         assert_eq!(leap_seconds_elapsed(at), 0);
 
         // between leap 3 and 4
-        let at: Instant = From::from(DateTime::<Gregorian, Utc>::new(1973, 9, 17, 13, 45, 18, 0).unwrap());
+        let at: Instant =
+            From::from(DateTime::<Gregorian, Utc>::new(1973, 9, 17, 13, 45, 18, 0).unwrap());
         assert_eq!(leap_seconds_elapsed(at), 3);
 
         // inside of leap second 4
-        let at: Instant = From::from(DateTime::<Gregorian, Utc>::new(1973,12, 31, 0, 0, 60, 500_000_000_000_000_000).unwrap());
+        let at: Instant = From::from(
+            DateTime::<Gregorian, Utc>::new(1973, 12, 31, 0, 0, 60, 500_000_000_000_000_000)
+                .unwrap(),
+        );
         assert_eq!(leap_seconds_elapsed(at), 3);
 
         // after leap second 4
-        let at: Instant = From::from(DateTime::<Gregorian, Utc>::new(1974, 1, 1, 0, 0, 0, 500_000_000_000_000_000).unwrap());
+        let at: Instant = From::from(
+            DateTime::<Gregorian, Utc>::new(1974, 1, 1, 0, 0, 0, 500_000_000_000_000_000).unwrap(),
+        );
         assert_eq!(leap_seconds_elapsed(at), 4);
 
         // after all leaps
-        let at: Instant = From::from(DateTime::<Gregorian, Utc>::new(2019, 9, 17, 13, 45, 18, 0).unwrap());
+        let at: Instant =
+            From::from(DateTime::<Gregorian, Utc>::new(2019, 9, 17, 13, 45, 18, 0).unwrap());
         assert_eq!(leap_seconds_elapsed(at), 28);
     }
 }

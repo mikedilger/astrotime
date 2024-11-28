@@ -1,15 +1,14 @@
-
 use std::convert::TryFrom;
 use std::ops::{Add, Sub};
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::calendar::Calendar;
 use crate::date_time::DateTime;
 use crate::duration::Duration;
-use crate::error::Error;
 use crate::epoch::Epoch;
+use crate::error::Error;
 use crate::standard::Standard;
 
 /// An `Instant` is a precise moment in time according to a particular time `Standard`.
@@ -25,7 +24,7 @@ use crate::standard::Standard;
 // Internally, Instants are Duration offsets from `Epoch::TimeStandard`, which is
 // January 1st, 1977 CE gregorian, 00:00:32.184 Tt
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Instant(pub(crate) Duration);
 
 impl Instant {
@@ -68,10 +67,17 @@ impl Instant {
     /// bounds (`0` <= `seconds` < `86_400`) or the attoseconds are out of bounds
     /// (`0` <= `attoseconds` < `1_000_000_000_000_000_000`)
     #[allow(clippy::manual_range_contains)]
-    pub fn from_julian_day_precise(day: i64, seconds: u32, attoseconds: i64) -> Result<Self, Error>
-    {
-        if seconds >= 86400 { return Err(Error::RangeError); }
-        if attoseconds < 0 || attoseconds >= 1_000_000_000_000_000_000 { return Err(Error::RangeError); }
+    pub fn from_julian_day_precise(
+        day: i64,
+        seconds: u32,
+        attoseconds: i64,
+    ) -> Result<Self, Error> {
+        if seconds >= 86400 {
+            return Err(Error::RangeError);
+        }
+        if attoseconds < 0 || attoseconds >= 1_000_000_000_000_000_000 {
+            return Err(Error::RangeError);
+        }
         let secs = day * 86400 + i64::from(seconds);
         Ok(Epoch::JulianPeriod.as_instant() + Duration::new(secs, attoseconds))
     }
@@ -112,7 +118,8 @@ impl Instant {
     #[must_use]
     pub fn as_julian_day_formatted(&self) -> String {
         let (day, frac) = self.as_julian_day_parts();
-        let fraction = format!("{}", frac).trim_start_matches(|c| c=='-' || c=='0')
+        let fraction = format!("{}", frac)
+            .trim_start_matches(|c| c == '-' || c == '0')
             .to_owned();
         format!("JD {}{}", day, fraction)
     }
@@ -170,16 +177,13 @@ impl TryFrom<std::time::SystemTime> for Instant {
     type Error = Error;
 
     fn try_from(s: std::time::SystemTime) -> Result<Self, Self::Error> {
-
         // NOTE: std::time::SystemTime, like UNIX, lies about UTC times
         //       in the past that cross leap seconds. When we compute the
         //       duration_since(UNIX_EPOCH), we get a number that is short
         //       by the total number of leap seconds that have occured.
         //       We correct for this below.
 
-        let since_unix_epoch_less_leaps: Duration =
-            match s.duration_since(std::time::UNIX_EPOCH)
-        {
+        let since_unix_epoch_less_leaps: Duration = match s.duration_since(std::time::UNIX_EPOCH) {
             Ok(std_dur) => TryFrom::try_from(std_dur)?,
             Err(std_time_error) => {
                 // we can handle negative durations ;-P
@@ -192,13 +196,15 @@ impl TryFrom<std::time::SystemTime> for Instant {
 
         // Add the missing leap seconds in two passes
         let leap_seconds_elapsed_try1 = crate::standard::leap_seconds_elapsed(time_less_leaps);
-        let time_maybe_missing_one_leap = time_less_leaps + Duration::new(leap_seconds_elapsed_try1, 0);
+        let time_maybe_missing_one_leap =
+            time_less_leaps + Duration::new(leap_seconds_elapsed_try1, 0);
 
         // Check that we didn't hit another leap second in the process
-        let leap_seconds_elapsed_try2 = crate::standard::leap_seconds_elapsed(time_maybe_missing_one_leap);
+        let leap_seconds_elapsed_try2 =
+            crate::standard::leap_seconds_elapsed(time_maybe_missing_one_leap);
 
-        Ok(if leap_seconds_elapsed_try2 >leap_seconds_elapsed_try1 {
-            time_maybe_missing_one_leap + Duration::new(1,0)
+        Ok(if leap_seconds_elapsed_try2 > leap_seconds_elapsed_try1 {
+            time_maybe_missing_one_leap + Duration::new(1, 0)
         } else {
             time_maybe_missing_one_leap
         })
@@ -211,7 +217,7 @@ mod test {
     use crate::calendar::Gregorian;
     use crate::date_time::DateTime;
     use crate::epoch::Epoch;
-    use crate::standard::{Utc, Tai};
+    use crate::standard::{Tai, Utc};
 
     #[test]
     fn test_instant_julian_day_conversions() {
@@ -251,19 +257,16 @@ mod test {
         );
 
         assert_eq!(
-            Instant::from_julian_day_precise(2440587, 43200 + 41, 184_000_000_000_000_000)
-                .unwrap(),
+            Instant::from_julian_day_precise(2440587, 43200 + 41, 184_000_000_000_000_000).unwrap(),
             Epoch::Unix.as_instant()
         );
         assert_eq!(
-            Instant::from_julian_day_precise(2451544, 43200 + 64, 184_000_000_000_000_000)
-                .unwrap(),
+            Instant::from_julian_day_precise(2451544, 43200 + 64, 184_000_000_000_000_000).unwrap(),
             Epoch::Y2k.as_instant()
         );
 
         assert_eq!(
-            Instant::from_julian_day_precise(2443144, 43200 + 32, 184_000_000_000_000_000)
-                .unwrap(),
+            Instant::from_julian_day_precise(2443144, 43200 + 32, 184_000_000_000_000_000).unwrap(),
             Epoch::TimeStandard.as_instant()
         );
     }
@@ -272,19 +275,26 @@ mod test {
     fn test_time_standard_conversions() {
         crate::setup_logging();
 
-        let p: Instant = From::from( DateTime::<Gregorian, Tai>::new(1993, 6, 30, 0, 0, 27, 0).unwrap());
+        let p: Instant =
+            From::from(DateTime::<Gregorian, Tai>::new(1993, 6, 30, 0, 0, 27, 0).unwrap());
         let q: DateTime<Gregorian, Utc> = From::from(p);
-        assert_eq!(q,
-                   DateTime::<Gregorian, Utc>::new(1993, 6, 30, 0, 0, 0, 0).unwrap());
+        assert_eq!(
+            q,
+            DateTime::<Gregorian, Utc>::new(1993, 6, 30, 0, 0, 0, 0).unwrap()
+        );
 
         let p: Instant = Epoch::Unix.as_instant();
         let q: DateTime<Gregorian, Utc> = From::from(p);
-        assert_eq!(q,
-                   DateTime::<Gregorian, Utc>::new(1970, 1, 1, 0, 0, 0, 0).unwrap());
+        assert_eq!(
+            q,
+            DateTime::<Gregorian, Utc>::new(1970, 1, 1, 0, 0, 0, 0).unwrap()
+        );
 
         let y2k: Instant = Epoch::Y2k.as_instant();
         let q: DateTime<Gregorian, Utc> = From::from(y2k);
-        assert_eq!(q,
-                   DateTime::<Gregorian, Utc>::new(2000, 1, 1, 0, 0, 0, 0).unwrap());
+        assert_eq!(
+            q,
+            DateTime::<Gregorian, Utc>::new(2000, 1, 1, 0, 0, 0, 0).unwrap()
+        );
     }
 }

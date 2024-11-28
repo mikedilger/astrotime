@@ -1,15 +1,14 @@
-
-use std::cmp::{PartialEq, Ordering};
+use std::cmp::{Ordering, PartialEq};
+use std::convert::TryFrom;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::ops::{Add, Sub};
-use std::convert::TryFrom;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use crate::calendar::{Calendar, Julian, Gregorian};
+use crate::calendar::{Calendar, Gregorian, Julian};
 use crate::duration::Duration;
 use crate::error::Error;
 use crate::standard::Standard;
@@ -52,22 +51,22 @@ use crate::standard::Standard;
 /// This represents the same thing that an `Instant` does, but it makes `Calendar` data
 /// easier to work with, and has such date precomputed and packed within.
 #[derive(Clone, Copy)] // is also Send
-#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DateTime<C: Calendar, S: Standard> {
     packed: u64,
     attos: u64,
     _cal: PhantomData<C>,
-    _std: PhantomData<S>
+    _std: PhantomData<S>,
 }
 
 // NOTE: Day and Month are packed with 0 basis (0 = 1st day or 1st month)
-const YEAR_BITS: u64  =       0xFFFF_FFFF_0000_0000;
-const SECOND_BITS: u64 =      0x0000_0000_FC00_0000;
-const MINUTE_BITS: u64 =      0x0000_0000_03F0_0000;
-const HOUR_BITS: u64 =        0x0000_0000_000F_8000;
-const DAY0_BITS: u64 =        0x0000_0000_0000_7C00;
-const _RESERVED_BITS: u64 =   0x0000_0000_0000_03F0;
-const MONTH0_BITS: u64 =      0x0000_0000_0000_000F;
+const YEAR_BITS: u64 = 0xFFFF_FFFF_0000_0000;
+const SECOND_BITS: u64 = 0x0000_0000_FC00_0000;
+const MINUTE_BITS: u64 = 0x0000_0000_03F0_0000;
+const HOUR_BITS: u64 = 0x0000_0000_000F_8000;
+const DAY0_BITS: u64 = 0x0000_0000_0000_7C00;
+const _RESERVED_BITS: u64 = 0x0000_0000_0000_03F0;
+const MONTH0_BITS: u64 = 0x0000_0000_0000_000F;
 // We pack all values (except attos) into a u64 at the following offsets:
 const YEAR_OFFSET: usize = 32;
 const SECOND_OFFSET: usize = 26;
@@ -80,13 +79,13 @@ const MONTH0_OFFSET: usize = 0;
 #[inline]
 fn pack(packed: &mut u64, bits: u64, offset: usize, value: u64) {
     *packed &= !bits; // zero
-    *packed |= value<<offset; // set
+    *packed |= value << offset; // set
 }
 
 // Pack a value into the packed field, only if you know it's already zero
 #[inline]
 fn pack_without_clearing(packed: &mut u64, offset: usize, value: u64) {
-    *packed |= value<<offset; // set
+    *packed |= value << offset; // set
 }
 
 // Unpack a value from the packed field
@@ -105,18 +104,22 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     #[allow(clippy::cast_sign_loss)]
     #[allow(clippy::cast_lossless)]
     #[must_use]
-    pub unsafe fn new_unchecked(year: i32, month: u8, day: u8,
-                                hour: u8, minute: u8, second: u8,
-                                attosecond: u64)
-                                -> Self
-    {
+    pub unsafe fn new_unchecked(
+        year: i32,
+        month: u8,
+        day: u8,
+        hour: u8,
+        minute: u8,
+        second: u8,
+        attosecond: u64,
+    ) -> Self {
         let mut packed: u64 = 0;
         pack_without_clearing(&mut packed, YEAR_OFFSET, year as u64);
         pack_without_clearing(&mut packed, SECOND_OFFSET, second as u64);
         pack_without_clearing(&mut packed, MINUTE_OFFSET, minute as u64);
         pack_without_clearing(&mut packed, HOUR_OFFSET, hour as u64);
-        pack_without_clearing(&mut packed, DAY0_OFFSET, (day-1) as u64);
-        pack_without_clearing(&mut packed, MONTH0_OFFSET, (month-1) as u64);
+        pack_without_clearing(&mut packed, DAY0_OFFSET, (day - 1) as u64);
+        pack_without_clearing(&mut packed, MONTH0_OFFSET, (month - 1) as u64);
 
         Self {
             packed,
@@ -136,22 +139,35 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// range (months from 1-12, days from 1-31, hours from 0-23, minutes from
     /// 0-59, seconds from 0-60, attoseconds from 0-999_999_999_999_999_999)
     #[allow(clippy::manual_range_contains)]
-    pub fn new(year: i32, month: u8, day: u8,
-               hour: u8, minute: u8, second: u8,
-               attosecond: u64)
-               -> Result<Self, Error>
-    {
-        if month<1 || month>12 { return Err(Error::RangeError); }
-        if day<1 || day>C::month_days(month, year) { return Err(Error::RangeError); }
-        if hour>23 { return Err(Error::RangeError); }
-        if minute>59 { return Err(Error::RangeError); }
-        if second>60 { return Err(Error::RangeError); }
-        if attosecond>999_999_999_999_999_999 { return Err(Error::RangeError); }
+    pub fn new(
+        year: i32,
+        month: u8,
+        day: u8,
+        hour: u8,
+        minute: u8,
+        second: u8,
+        attosecond: u64,
+    ) -> Result<Self, Error> {
+        if month < 1 || month > 12 {
+            return Err(Error::RangeError);
+        }
+        if day < 1 || day > C::month_days(month, year) {
+            return Err(Error::RangeError);
+        }
+        if hour > 23 {
+            return Err(Error::RangeError);
+        }
+        if minute > 59 {
+            return Err(Error::RangeError);
+        }
+        if second > 60 {
+            return Err(Error::RangeError);
+        }
+        if attosecond > 999_999_999_999_999_999 {
+            return Err(Error::RangeError);
+        }
 
-        Ok(unsafe {
-            Self::new_unchecked(year, month, day,
-                                hour, minute, second, attosecond)
-        })
+        Ok(unsafe { Self::new_unchecked(year, month, day, hour, minute, second, attosecond) })
     }
 
     /// Create a new `DateTime` from the given parts, with BC years.
@@ -164,12 +180,16 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// range (months from 1-12, days from 1-31, hours from 0-23, minutes from
     /// 0-59, seconds from 0-60, attoseconds from 0-999_999_999_999_999_999)
     #[allow(clippy::manual_range_contains)]
-    pub fn new_bc(bc_year: i32, month: u8, day: u8,
-                  hour: u8, minute: u8, second: u8,
-                  attosecond: u64)
-                  -> Result<Self, Error>
-    {
-        let year = 1-bc_year;
+    pub fn new_bc(
+        bc_year: i32,
+        month: u8,
+        day: u8,
+        hour: u8,
+        minute: u8,
+        second: u8,
+        attosecond: u64,
+    ) -> Result<Self, Error> {
+        let year = 1 - bc_year;
         Self::new(year, month, day, hour, minute, second, attosecond)
     }
 
@@ -188,11 +208,15 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     #[must_use]
     #[allow(clippy::cast_sign_loss)]
     #[allow(clippy::cast_possible_truncation)]
-    pub fn new_abnormal(mut year: i32, month: i64, day: i64,
-                        mut hour: i64, mut minute: i64, mut second: i64,
-                        mut attosecond: i64)
-                        -> Self
-    {
+    pub fn new_abnormal(
+        mut year: i32,
+        month: i64,
+        day: i64,
+        mut hour: i64,
+        mut minute: i64,
+        mut second: i64,
+        mut attosecond: i64,
+    ) -> Self {
         use crate::divmod_i64;
 
         let mut month0 = month - 1;
@@ -211,21 +235,21 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
         assert!(attosecond < 1_000_000_000_000_000_000);
 
         // roll up seconds into minutes (handling negative values)
-        let (div, modulus) = divmod_i64( second, 60 );
+        let (div, modulus) = divmod_i64(second, 60);
         minute += div;
         second = modulus;
         assert!(second >= 0);
         assert!(second < 60);
 
         // roll up minutes into hours
-        let (div, modulus) = divmod_i64( minute, 60 );
+        let (div, modulus) = divmod_i64(minute, 60);
         hour += div;
         minute = modulus;
         assert!(minute >= 0);
         assert!(minute < 60);
 
         // roll up hours into days
-        let (div, modulus) = divmod_i64( hour, 24 );
+        let (div, modulus) = divmod_i64(hour, 24);
         day0 += div;
         hour = modulus;
         assert!(hour >= 0);
@@ -235,7 +259,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
 
         // We cannot handle overflowing months or negative months in
         // the day_number() function, so we have to normalize months first
-        let (div, modulus) = divmod_i64( month0, 12 );
+        let (div, modulus) = divmod_i64(month0, 12);
         year += div as i32;
 
         month0 = modulus;
@@ -245,16 +269,21 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
         // Compute the day number
         // NOTE: day may be overflowing or negative.
         //       C::day_number needs to handle this condition.
-        let dn = C::day_number(year,
-                               (month0+1).try_into().unwrap(),
-                               day0+1).unwrap();
+        let dn = C::day_number(year, (month0 + 1).try_into().unwrap(), day0 + 1).unwrap();
 
         // Now set the date from that day number
-        let (y,m,d) = C::from_day_number(dn).unwrap();
+        let (y, m, d) = C::from_day_number(dn).unwrap();
 
         unsafe {
-            Self::new_unchecked(y, m, d,
-                                hour as u8, minute as u8, second as u8, attosecond as u64)
+            Self::new_unchecked(
+                y,
+                m,
+                d,
+                hour as u8,
+                minute as u8,
+                second as u8,
+                attosecond as u64,
+            )
         }
     }
 
@@ -288,11 +317,13 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::cast_precision_loss)]
     #[allow(clippy::cast_sign_loss)]
-    pub fn from_day_number_and_fraction(day_number: i64, day_fraction: f64)
-                                        -> Result<Self, Error>
-    {
-        if day_fraction<0.0 { return Err(Error::RangeError); }
-        if day_fraction>=1.0 { return Err(Error::RangeError); }
+    pub fn from_day_number_and_fraction(day_number: i64, day_fraction: f64) -> Result<Self, Error> {
+        if day_fraction < 0.0 {
+            return Err(Error::RangeError);
+        }
+        if day_fraction >= 1.0 {
+            return Err(Error::RangeError);
+        }
 
         let (year, month, day) = C::from_day_number(day_number)?;
         let (hour, min, sec, atto) = {
@@ -310,22 +341,17 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
 
             let mut m = s / 60;
             s %= 60;
-            assert!(s<60);
+            assert!(s < 60);
 
             let h = m / 60;
-            assert!(h<24);
+            assert!(h < 24);
             m %= 60;
-            assert!(m<60);
+            assert!(m < 60);
 
-            (h as u8,
-             m as u8,
-             s as u8,
-             atto as u64)
+            (h as u8, m as u8, s as u8, atto as u64)
         };
 
-        Ok(unsafe {
-            Self::new_unchecked(year, month, day, hour, min, sec, atto)
-        })
+        Ok(unsafe { Self::new_unchecked(year, month, day, hour, min, sec, atto) })
     }
 
     /// Create a `DateTime` from a `Duration` from the calendar epoch
@@ -459,13 +485,18 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// Will return `Error::RangeError` if `month` is <1 or >12.
     #[allow(clippy::manual_range_contains)]
     pub fn set_month(&mut self, month: u8) -> Result<(), Error> {
-        if month<1 || month>12 {
+        if month < 1 || month > 12 {
             return Err(Error::RangeError);
         }
         if self.day() > C::month_days(month, self.year()) {
             return Err(Error::RangeError);
         }
-        pack(&mut self.packed, MONTH0_BITS, MONTH0_OFFSET, u64::from(month-1));
+        pack(
+            &mut self.packed,
+            MONTH0_BITS,
+            MONTH0_OFFSET,
+            u64::from(month - 1),
+        );
         Ok(())
     }
 
@@ -476,10 +507,10 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// Will return `Error::RangeError` if `day` is outside of the range of days
     /// for the month.
     pub fn set_day(&mut self, day: u8) -> Result<(), Error> {
-        if day<1 || day> C::month_days(self.month(), self.year()) {
+        if day < 1 || day > C::month_days(self.month(), self.year()) {
             return Err(Error::RangeError);
         }
-        pack(&mut self.packed, DAY0_BITS, DAY0_OFFSET, u64::from(day-1));
+        pack(&mut self.packed, DAY0_BITS, DAY0_OFFSET, u64::from(day - 1));
         Ok(())
     }
 
@@ -489,7 +520,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     ///
     /// Will return `Error::RangeError` if `hour` is greater than 23.
     pub fn set_hour(&mut self, hour: u8) -> Result<(), Error> {
-        if hour>23 {
+        if hour > 23 {
             return Err(Error::RangeError);
         }
         pack(&mut self.packed, HOUR_BITS, HOUR_OFFSET, u64::from(hour));
@@ -502,10 +533,15 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     ///
     /// Will return `Error::RangeError` if `minute` is greater than 59.
     pub fn set_minute(&mut self, minute: u8) -> Result<(), Error> {
-        if minute>59 {
+        if minute > 59 {
             return Err(Error::RangeError);
         }
-        pack(&mut self.packed, MINUTE_BITS, MINUTE_OFFSET, u64::from(minute));
+        pack(
+            &mut self.packed,
+            MINUTE_BITS,
+            MINUTE_OFFSET,
+            u64::from(minute),
+        );
         Ok(())
     }
 
@@ -517,10 +553,15 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// The second of '60' should only be used for leapsecond situations, but
     /// no error is thrown if used otherwise.
     pub fn set_second(&mut self, second: u8) -> Result<(), Error> {
-        if second>60 {
+        if second > 60 {
             return Err(Error::RangeError);
         }
-        pack(&mut self.packed, SECOND_BITS, SECOND_OFFSET, u64::from(second));
+        pack(
+            &mut self.packed,
+            SECOND_BITS,
+            SECOND_OFFSET,
+            u64::from(second),
+        );
         Ok(())
     }
 
@@ -531,7 +572,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// Will return `Error::RangeError` if `attosecond` are out of the proscribed range
     /// (more than 1 seconds worth of attoseconds)
     pub fn set_attosecond(&mut self, attosecond: u64) -> Result<(), Error> {
-        if attosecond>1_000_000_000_000_000_000 {
+        if attosecond > 1_000_000_000_000_000_000 {
             return Err(Error::RangeError);
         }
         self.attos = attosecond;
@@ -589,11 +630,11 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
         // smaller would.
         const FACTOR: u64 = 100_000_000_000_000;
 
-        (  u64::from(self.hour()) * 3600 * FACTOR
-           + u64::from(self.minute()) * 60   * FACTOR
-           + u64::from(self.second()) *        FACTOR
-           + (self.attosecond()/10000) as u64)
-            as f64 / 8_640_000_000_000_000_000.
+        (u64::from(self.hour()) * 3600 * FACTOR
+            + u64::from(self.minute()) * 60 * FACTOR
+            + u64::from(self.second()) * FACTOR
+            + (self.attosecond() / 10000) as u64) as f64
+            / 8_640_000_000_000_000_000.
     }
 
     /// Duration from the calendar epoch (with the calendar epoch represented
@@ -617,17 +658,37 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
 
 impl<C: Calendar, S: Standard> fmt::Debug for DateTime<C, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:018} {} {}",
-               self.year(), self.month(), self.day(), self.hour(), self.minute(), self.second(),
-               self.attosecond(), C::name(), S::abbrev())
+        write!(
+            f,
+            "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:018} {} {}",
+            self.year(),
+            self.month(),
+            self.day(),
+            self.hour(),
+            self.minute(),
+            self.second(),
+            self.attosecond(),
+            C::name(),
+            S::abbrev()
+        )
     }
 }
 
 impl<C: Calendar, S: Standard> fmt::Display for DateTime<C, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:018} {} {}",
-               self.year(), self.month(), self.day(), self.hour(), self.minute(), self.second(),
-               self.attosecond(), C::name(), S::abbrev())
+        write!(
+            f,
+            "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:018} {} {}",
+            self.year(),
+            self.month(),
+            self.day(),
+            self.hour(),
+            self.minute(),
+            self.second(),
+            self.attosecond(),
+            C::name(),
+            S::abbrev()
+        )
     }
 }
 
@@ -636,10 +697,15 @@ impl<C: Calendar, S: Standard> Add<Duration> for DateTime<C, S> {
 
     #[allow(clippy::cast_possible_wrap)]
     fn add(self, rhs: Duration) -> Self {
-        Self::new_abnormal(self.year(), i64::from(self.month()), i64::from(self.day()),
-                           i64::from(self.hour()), i64::from(self.minute()),
-                           i64::from(self.second()) + rhs.seconds_part(),
-                           self.attosecond() as i64 + rhs.attos_part() as i64)
+        Self::new_abnormal(
+            self.year(),
+            i64::from(self.month()),
+            i64::from(self.day()),
+            i64::from(self.hour()),
+            i64::from(self.minute()),
+            i64::from(self.second()) + rhs.seconds_part(),
+            self.attosecond() as i64 + rhs.attos_part() as i64,
+        )
     }
 }
 
@@ -648,10 +714,15 @@ impl<C: Calendar, S: Standard> Sub<Duration> for DateTime<C, S> {
 
     #[allow(clippy::cast_possible_wrap)]
     fn sub(self, rhs: Duration) -> Self {
-        Self::new_abnormal(self.year(), i64::from(self.month()), i64::from(self.day()),
-                           i64::from(self.hour()), i64::from(self.minute()),
-                           i64::from(self.second()) - rhs.seconds_part(),
-                           self.attosecond() as i64 - rhs.attos_part() as i64)
+        Self::new_abnormal(
+            self.year(),
+            i64::from(self.month()),
+            i64::from(self.day()),
+            i64::from(self.hour()),
+            i64::from(self.minute()),
+            i64::from(self.second()) - rhs.seconds_part(),
+            self.attosecond() as i64 - rhs.attos_part() as i64,
+        )
     }
 }
 
@@ -660,8 +731,7 @@ impl<C: Calendar, S: Standard> Sub for DateTime<C, S> {
 
     #[allow(clippy::cast_possible_wrap)]
     fn sub(self, other: Self) -> Duration {
-        let secs =
-            (self.day_number() - other.day_number()) * 86400
+        let secs = (self.day_number() - other.day_number()) * 86400
             + (i64::from(self.hour()) - i64::from(other.hour())) * 3600
             + (i64::from(self.minute()) - i64::from(other.minute())) * 60
             + (i64::from(self.second()) - i64::from(other.second()));
@@ -676,16 +746,28 @@ impl<C: Calendar, S: Standard> PartialEq<Self> for DateTime<C, S> {
     }
 }
 
-impl<C: Calendar, S: Standard> Eq for DateTime<C, S> { }
+impl<C: Calendar, S: Standard> Eq for DateTime<C, S> {}
 
 impl<C: Calendar, S: Standard> Ord for DateTime<C, S> {
     fn cmp(&self, other: &Self) -> Ordering {
-        if self.year() != other.year() { return self.year().cmp(&other.year()) }
-        if self.month() != other.month() { return self.month().cmp(&other.month()) }
-        if self.day() != other.day() { return self.day().cmp(&other.day()) }
-        if self.hour() != other.hour() { return self.hour().cmp(&other.hour()) }
-        if self.minute() != other.minute() { return self.minute().cmp(&other.minute()) }
-        if self.second() != other.second() { return self.second().cmp(&other.second()) }
+        if self.year() != other.year() {
+            return self.year().cmp(&other.year());
+        }
+        if self.month() != other.month() {
+            return self.month().cmp(&other.month());
+        }
+        if self.day() != other.day() {
+            return self.day().cmp(&other.day());
+        }
+        if self.hour() != other.hour() {
+            return self.hour().cmp(&other.hour());
+        }
+        if self.minute() != other.minute() {
+            return self.minute().cmp(&other.minute());
+        }
+        if self.second() != other.second() {
+            return self.second().cmp(&other.second());
+        }
         self.attosecond().cmp(&other.attosecond())
     }
 }
@@ -725,7 +807,6 @@ impl<S: Standard> TryFrom<DateTime<Julian, S>> for DateTime<Gregorian, S> {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::DateTime;
@@ -746,7 +827,10 @@ mod test {
         assert!(DateTime::<Gregorian, Tt>::new(2004, 2, 29, 24, 0, 0, 0).is_err());
         assert!(DateTime::<Gregorian, Tt>::new(2004, 2, 29, 0, 60, 0, 0).is_err());
         assert!(DateTime::<Gregorian, Tt>::new(2004, 2, 29, 0, 0, 61, 0).is_err());
-        assert!(DateTime::<Gregorian, Tt>::new(2004, 2, 29, 0, 0, 0, 1_000_000_000_000_000_000).is_err());
+        assert!(
+            DateTime::<Gregorian, Tt>::new(2004, 2, 29, 0, 0, 0, 1_000_000_000_000_000_000)
+                .is_err()
+        );
 
         let _ = DateTime::<Gregorian, Tt>::new_abnormal(0, 1, 31, 0, 0, 0, 0);
         let _ = DateTime::<Gregorian, Tt>::new_abnormal(2000, 0, 31, 0, 0, 0, 0);
@@ -758,7 +842,15 @@ mod test {
         let _ = DateTime::<Gregorian, Tt>::new_abnormal(2004, 2, 29, 24, 0, 0, 0);
         let _ = DateTime::<Gregorian, Tt>::new_abnormal(2004, 2, 29, 0, 60, 0, 0);
         let _ = DateTime::<Gregorian, Tt>::new_abnormal(2004, 2, 29, 0, 0, 61, 0);
-        let _ = DateTime::<Gregorian, Tt>::new_abnormal(2004, 2, 29, 0, 0, 0, 1_000_000_000_000_000_000);
+        let _ = DateTime::<Gregorian, Tt>::new_abnormal(
+            2004,
+            2,
+            29,
+            0,
+            0,
+            0,
+            1_000_000_000_000_000_000,
+        );
     }
 
     #[test]
@@ -766,7 +858,7 @@ mod test {
         crate::setup_logging();
 
         // This is right out of leap second file for 1 Jan 1972
-        let dt = DateTime::<Gregorian, Tt>::new_abnormal(1900,1,1,0,0,2272060800,0);
+        let dt = DateTime::<Gregorian, Tt>::new_abnormal(1900, 1, 1, 0, 0, 2272060800, 0);
         assert_eq!(dt.year(), 1972);
         assert_eq!(dt.month(), 1);
         assert_eq!(dt.day(), 1);
@@ -779,7 +871,7 @@ mod test {
         // NOTE FIXME ELSEWHERE: t1900 must not include leap seconds, or else
         // this would be off by 2 as it does not account for the 2 leap seconds
         // added prior to it.
-        let dt = DateTime::<Gregorian, Tt>::new_abnormal(1900,1,1,0,0,2303683200,0);
+        let dt = DateTime::<Gregorian, Tt>::new_abnormal(1900, 1, 1, 0, 0, 2303683200, 0);
         assert_eq!(dt.year(), 1973);
         assert_eq!(dt.month(), 1);
         assert_eq!(dt.day(), 1);
@@ -796,7 +888,15 @@ mod test {
         assert_eq!(dt.hour(), 1);
 
         // Test some negative values
-        let dt = DateTime::<Gregorian, Tt>::new_abnormal(2000, 1-11, 1+(365-31), -12, 60*12, 0, 0);
+        let dt = DateTime::<Gregorian, Tt>::new_abnormal(
+            2000,
+            1 - 11,
+            1 + (365 - 31),
+            -12,
+            60 * 12,
+            0,
+            0,
+        );
         // We subtract 11 months, but add back the (365-11) days
         // We subtract 12 hours, but add back the (60*12) minutes
         assert_eq!(dt.year(), 2000);
@@ -808,7 +908,8 @@ mod test {
         assert_eq!(dt.attosecond(), 0);
 
         // Test further negative values
-        let dt = DateTime::<Gregorian, Tt>::new_abnormal(2000, 1-60, 1+(365*4 + 366), 0, 0, 0, 0);
+        let dt =
+            DateTime::<Gregorian, Tt>::new_abnormal(2000, 1 - 60, 1 + (365 * 4 + 366), 0, 0, 0, 0);
         // We subtract 60 months, but add back the (365 + 365 + 365 + 366 + 365) days
         // We subtract 12 hours, but add back the (60*12) minutes
         assert_eq!(dt.year(), 2000);
@@ -827,17 +928,17 @@ mod test {
     fn test_day_number() {
         crate::setup_logging();
 
-        let dt = DateTime::<Gregorian, Tt>::new(1,1,1,0,0,0,0).unwrap(); // year 1
+        let dt = DateTime::<Gregorian, Tt>::new(1, 1, 1, 0, 0, 0, 0).unwrap(); // year 1
         assert_eq!(dt.day_number(), 0);
 
         let dt2 = DateTime::<Gregorian, Tt>::from_day_number(dt.day_number()).unwrap();
-        assert_eq!(dt,dt2);
+        assert_eq!(dt, dt2);
 
-        let dt = DateTime::<Gregorian, Tt>::new(2000,1,1,0,0,0,0).unwrap();
+        let dt = DateTime::<Gregorian, Tt>::new(2000, 1, 1, 0, 0, 0, 0).unwrap();
         assert_eq!(dt.day_number(), 730119);
 
         let dt2 = DateTime::<Gregorian, Tt>::from_day_number(dt.day_number()).unwrap();
-        assert_eq!(dt,dt2);
+        assert_eq!(dt, dt2);
 
         assert_eq!(dt2.day_number(), dt.day_number())
     }
@@ -848,63 +949,69 @@ mod test {
 
         use float_cmp::ApproxEq;
         let g1 = DateTime::<Gregorian, Tt>::new(2000, 1, 1, 12, 0, 0, 0).unwrap();
-        assert!( g1.day_fraction().approx_eq(0.5, (0.0, 1) ));
+        assert!(g1.day_fraction().approx_eq(0.5, (0.0, 1)));
         let g2 = DateTime::<Gregorian, Tt>::new(2000, 1, 1, 18, 0, 0, 0).unwrap();
-        assert!( g2.day_fraction().approx_eq(0.75, (0.0, 1) ));
+        assert!(g2.day_fraction().approx_eq(0.75, (0.0, 1)));
         let g3 = DateTime::<Gregorian, Tt>::new(2000, 1, 1, 0, 0, 1, 0).unwrap();
-        assert!( g3.day_fraction().approx_eq(1./86400., (0.0, 1) ));
+        assert!(g3.day_fraction().approx_eq(1. / 86400., (0.0, 1)));
 
-        let g4 = DateTime::<Gregorian, Tt>::from_day_number_and_fraction(g1.day_number(), 0.75).unwrap();
+        let g4 =
+            DateTime::<Gregorian, Tt>::from_day_number_and_fraction(g1.day_number(), 0.75).unwrap();
         assert_eq!(g4, g2);
 
-        let g4 = DateTime::<Gregorian, Tt>::from_day_number_and_fraction(g1.day_number(), 19./97.).unwrap();
-        assert!(g4.day_fraction().approx_eq(19./97., (0.0, 1) ));
+        let g4 =
+            DateTime::<Gregorian, Tt>::from_day_number_and_fraction(g1.day_number(), 19. / 97.)
+                .unwrap();
+        assert!(g4.day_fraction().approx_eq(19. / 97., (0.0, 1)));
     }
 
     #[test]
     fn test_extractors() {
         crate::setup_logging();
 
-        let g = DateTime::<Gregorian, Tt>::new(1965, 3, 7, 14, 29, 42, 500_000_000_000_000_000).unwrap();
-        assert_eq!( g.year(), 1965 );
-        assert_eq!( g.month(), 3 );
-        assert_eq!( g.month0(), 2 );
-        assert_eq!( g.day(), 7 );
-        assert_eq!( g.day0(), 6 );
-        assert_eq!( g.hour(), 14);
-        assert_eq!( g.minute(), 29);
-        assert_eq!( g.second(), 42);
-        assert_eq!( g.attosecond(), 500_000_000_000_000_000);
+        let g = DateTime::<Gregorian, Tt>::new(1965, 3, 7, 14, 29, 42, 500_000_000_000_000_000)
+            .unwrap();
+        assert_eq!(g.year(), 1965);
+        assert_eq!(g.month(), 3);
+        assert_eq!(g.month0(), 2);
+        assert_eq!(g.day(), 7);
+        assert_eq!(g.day0(), 6);
+        assert_eq!(g.hour(), 14);
+        assert_eq!(g.minute(), 29);
+        assert_eq!(g.second(), 42);
+        assert_eq!(g.attosecond(), 500_000_000_000_000_000);
     }
 
     #[test]
     fn test_setters() {
         crate::setup_logging();
 
-        let mut g = DateTime::<Gregorian, Tt>::new(1965, 3, 7, 14, 29, 42, 500_000_000_000_000_000).unwrap();
+        let mut g = DateTime::<Gregorian, Tt>::new(1965, 3, 7, 14, 29, 42, 500_000_000_000_000_000)
+            .unwrap();
 
         g.set_year(1921);
-        assert_eq!( g.year(), 1921 );
+        assert_eq!(g.year(), 1921);
 
         g.set_month(1).unwrap();
-        assert_eq!( g.month(), 1 );
+        assert_eq!(g.month(), 1);
 
         g.set_day(17).unwrap();
-        assert_eq!( g.day(), 17 );
+        assert_eq!(g.day(), 17);
 
         g.set_hour(3).unwrap();
-        assert_eq!( g.hour(), 3 );
+        assert_eq!(g.hour(), 3);
 
         g.set_minute(55).unwrap();
-        assert_eq!( g.minute(), 55 );
+        assert_eq!(g.minute(), 55);
 
         g.set_second(51).unwrap();
-        assert_eq!( g.second(), 51 );
+        assert_eq!(g.second(), 51);
 
         g.set_attosecond(123_456_789_012_345_678).unwrap();
-        assert_eq!( g.attosecond(), 123_456_789_012_345_678 );
+        assert_eq!(g.attosecond(), 123_456_789_012_345_678);
 
-        let h = DateTime::<Gregorian, Tt>::new(1921, 1, 17, 3, 55, 51, 123_456_789_012_345_678).unwrap();
+        let h = DateTime::<Gregorian, Tt>::new(1921, 1, 17, 3, 55, 51, 123_456_789_012_345_678)
+            .unwrap();
 
         assert_eq!(g, h);
 
@@ -921,13 +1028,17 @@ mod test {
     fn test_comparison() {
         crate::setup_logging();
 
-        let g = DateTime::<Gregorian, Tt>::new(1965, 3, 7, 14, 29, 42, 500_000_000_000_000_000).unwrap();
-        let h = DateTime::<Gregorian, Tt>::new(1966, 1, 17, 3, 55, 51, 123_456_789_012_345_678).unwrap();
-        let i = DateTime::<Gregorian, Tt>::new(1966, 3, 7, 14, 29, 42, 500_000_000_000_000_000).unwrap();
-        let j = DateTime::<Gregorian, Tt>::new(1966, 3, 7, 14, 29, 42, 500_000_000_000_000_000).unwrap();
-        assert!( g < h );
-        assert!( h < i );
-        assert!( i == j);
+        let g = DateTime::<Gregorian, Tt>::new(1965, 3, 7, 14, 29, 42, 500_000_000_000_000_000)
+            .unwrap();
+        let h = DateTime::<Gregorian, Tt>::new(1966, 1, 17, 3, 55, 51, 123_456_789_012_345_678)
+            .unwrap();
+        let i = DateTime::<Gregorian, Tt>::new(1966, 3, 7, 14, 29, 42, 500_000_000_000_000_000)
+            .unwrap();
+        let j = DateTime::<Gregorian, Tt>::new(1966, 3, 7, 14, 29, 42, 500_000_000_000_000_000)
+            .unwrap();
+        assert!(g < h);
+        assert!(h < i);
+        assert!(i == j);
     }
 
     #[test]
@@ -948,8 +1059,10 @@ mod test {
         let g1 = DateTime::<Gregorian, Tt>::new(2000, 1, 1, 0, 0, 0, 0).unwrap();
         let g2 = DateTime::<Gregorian, Tt>::new(2001, 2, 2, 1, 3, 5, 11).unwrap();
         let diff = g2 - g1;
-        assert_eq!(diff.seconds_part(),
-                   366*86400 + 31*86400 + 1*86400 + 1*3600 + 3*60 + 5);
+        assert_eq!(
+            diff.seconds_part(),
+            366 * 86400 + 31 * 86400 + 1 * 86400 + 1 * 3600 + 3 * 60 + 5
+        );
         assert_eq!(diff.attos_part(), 11);
     }
 
@@ -959,7 +1072,16 @@ mod test {
 
         let min = DateTime::<Gregorian, Tt>::new(std::i32::MIN, 1, 1, 0, 0, 0, 0).unwrap();
         info!("Min gregorian: {}", min);
-        let max = DateTime::<Gregorian, Tt>::new(std::i32::MAX, 12, 31, 23, 59, 59, 999_999_999_999_999_999).unwrap();
+        let max = DateTime::<Gregorian, Tt>::new(
+            std::i32::MAX,
+            12,
+            31,
+            23,
+            59,
+            59,
+            999_999_999_999_999_999,
+        )
+        .unwrap();
         info!("Max gregorian: {}", max);
     }
 
@@ -967,9 +1089,9 @@ mod test {
     fn test_bc_day_numbers() {
         crate::setup_logging();
 
-        let mar1 = DateTime::<Gregorian, Tt>::new(0,3,1,0,0,0,0).unwrap();
-        let feb29 = DateTime::<Gregorian, Tt>::new(0,2,29,0,0,0,0).unwrap();
-        let feb28 = DateTime::<Gregorian, Tt>::new(0,2,28,0,0,0,0).unwrap();
+        let mar1 = DateTime::<Gregorian, Tt>::new(0, 3, 1, 0, 0, 0, 0).unwrap();
+        let feb29 = DateTime::<Gregorian, Tt>::new(0, 2, 29, 0, 0, 0, 0).unwrap();
+        let feb28 = DateTime::<Gregorian, Tt>::new(0, 2, 28, 0, 0, 0, 0).unwrap();
         assert_eq!(mar1.day_number(), -306);
         assert_eq!(feb29.day_number(), -307);
         assert_eq!(feb28.day_number(), -308);
@@ -986,36 +1108,36 @@ mod test {
     fn test_convert_calendar() {
         crate::setup_logging();
 
-        let j = DateTime::<Julian, Tt>::new(1582,10,5,0,0,0,0).unwrap();
-        let g = DateTime::<Gregorian, Tt>::new(1582,10,15,0,0,0,0).unwrap();
+        let j = DateTime::<Julian, Tt>::new(1582, 10, 5, 0, 0, 0, 0).unwrap();
+        let g = DateTime::<Gregorian, Tt>::new(1582, 10, 15, 0, 0, 0, 0).unwrap();
         let j2: DateTime<Julian, Tt> = TryFrom::try_from(g).unwrap();
         assert_eq!(j, j2);
         let g2: DateTime<Gregorian, Tt> = TryFrom::try_from(j).unwrap();
         assert_eq!(g, g2);
 
-        let j = DateTime::<Julian, Tt>::new(1582,10,4,0,0,0,0).unwrap();
-        let g = DateTime::<Gregorian, Tt>::new(1582,10,14,0,0,0,0).unwrap();
+        let j = DateTime::<Julian, Tt>::new(1582, 10, 4, 0, 0, 0, 0).unwrap();
+        let g = DateTime::<Gregorian, Tt>::new(1582, 10, 14, 0, 0, 0, 0).unwrap();
         let j2: DateTime<Julian, Tt> = TryFrom::try_from(g).unwrap();
         assert_eq!(j, j2);
         let g2: DateTime<Gregorian, Tt> = TryFrom::try_from(j).unwrap();
         assert_eq!(g, g2);
 
-        let j = DateTime::<Julian, Tt>::new(-4713,1,1,0,0,0,0).unwrap();
-        let g = DateTime::<Gregorian, Tt>::new(-4714,11,24,0,0,0,0).unwrap();
+        let j = DateTime::<Julian, Tt>::new(-4713, 1, 1, 0, 0, 0, 0).unwrap();
+        let g = DateTime::<Gregorian, Tt>::new(-4714, 11, 24, 0, 0, 0, 0).unwrap();
         let j2: DateTime<Julian, Tt> = TryFrom::try_from(g).unwrap();
         assert_eq!(j, j2);
         let g2: DateTime<Gregorian, Tt> = TryFrom::try_from(j).unwrap();
         assert_eq!(g, g2);
 
-        let j = DateTime::<Julian, Tt>::new(1,1,3,0,0,0,0).unwrap();
-        let g = DateTime::<Gregorian, Tt>::new(1,1,1,0,0,0,0).unwrap();
+        let j = DateTime::<Julian, Tt>::new(1, 1, 3, 0, 0, 0, 0).unwrap();
+        let g = DateTime::<Gregorian, Tt>::new(1, 1, 1, 0, 0, 0, 0).unwrap();
         let j2: DateTime<Julian, Tt> = TryFrom::try_from(g).unwrap();
         assert_eq!(j, j2);
         let g2: DateTime<Gregorian, Tt> = TryFrom::try_from(j).unwrap();
         assert_eq!(g, g2);
 
-        let j = DateTime::<Julian, Tt>::new(1,1,1,0,0,0,0).unwrap();
-        let g = DateTime::<Gregorian, Tt>::new(0,12,30,0,0,0,0).unwrap();
+        let j = DateTime::<Julian, Tt>::new(1, 1, 1, 0, 0, 0, 0).unwrap();
+        let g = DateTime::<Gregorian, Tt>::new(0, 12, 30, 0, 0, 0, 0).unwrap();
         let j2: DateTime<Julian, Tt> = TryFrom::try_from(g).unwrap();
         assert_eq!(j, j2);
         let g2: DateTime<Gregorian, Tt> = TryFrom::try_from(j).unwrap();
@@ -1026,11 +1148,11 @@ mod test {
     fn test_epoch_duration() {
         crate::setup_logging();
 
-        let g = DateTime::<Gregorian, Tt>::new(1582,10,14,0,0,0,0).unwrap();
+        let g = DateTime::<Gregorian, Tt>::new(1582, 10, 14, 0, 0, 0, 0).unwrap();
         let h = DateTime::<Gregorian, Tt>::from_duration_from_epoch(g.duration_from_epoch());
         assert_eq!(g, h);
 
-        let g = DateTime::<Julian, Tt>::new(1582,10,14,11,0,5,130).unwrap();
+        let g = DateTime::<Julian, Tt>::new(1582, 10, 14, 11, 0, 5, 130).unwrap();
         let h = DateTime::<Julian, Tt>::from_duration_from_epoch(g.duration_from_epoch());
         assert_eq!(g, h);
     }

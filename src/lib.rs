@@ -2,17 +2,13 @@
 //!
 //! Time related types for scientific and astronomical usage.
 
-#![warn(
-     clippy::all,
-     clippy::pedantic,
-     clippy::nursery,
-     clippy::cargo,
-)]
+#![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 
 mod calendar;
-pub use calendar::{Calendar, Julian, Gregorian};
+pub use calendar::{Calendar, Gregorian, Julian};
 
 mod date_time;
 pub use date_time::DateTime;
@@ -30,8 +26,7 @@ mod instant;
 pub use instant::Instant;
 
 mod standard;
-pub use standard::{Standard, Tt, Tai, Utc};
-
+pub use standard::{Standard, Tai, Tt, Utc};
 
 // When running tests, we setup the logger
 #[cfg(test)]
@@ -47,12 +42,8 @@ fn setup_logging() {
 macro_rules! define_divmod {
     ($t:ty, $name:ident) => {
         #[inline]
-        const fn $name(a: $t, b: $t) -> ($t, $t)
-        {
-            (
-                a.div_euclid(b),
-                a.rem_euclid(b)
-            )
+        const fn $name(a: $t, b: $t) -> ($t, $t) {
+            (a.div_euclid(b), a.rem_euclid(b))
             /*
             assert!(b>0); // i don't know what it means to modulo a negative.
 
@@ -72,11 +63,11 @@ define_divmod!(i64, divmod_i64);
 fn test_divmod() {
     crate::setup_logging();
 
-    let (div,modulo) = divmod_i64(47, 10);
+    let (div, modulo) = divmod_i64(47, 10);
     assert_eq!(div, 4);
     assert_eq!(modulo, 7);
 
-    let (div,modulo) = divmod_i64(-47, 10);
+    let (div, modulo) = divmod_i64(-47, 10);
     assert_eq!(div, -5);
     assert_eq!(modulo, 3);
 }
