@@ -24,7 +24,6 @@ use crate::standard::Standard;
 //
 // Internally, Instants are Duration offsets from `Epoch::TimeStandard`, which is
 // January 1st, 1977 CE gregorian, 00:00:32.184 Tt
-// which is identical in TT, TCG, and TCB
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
 pub struct Instant(pub(crate) Duration);
@@ -212,7 +211,7 @@ mod test {
     use crate::calendar::Gregorian;
     use crate::date_time::DateTime;
     use crate::epoch::Epoch;
-    use crate::standard::{Utc, Tai, Tcb};
+    use crate::standard::{Utc, Tai};
 
     #[test]
     fn test_instant_julian_day_conversions() {
@@ -287,17 +286,5 @@ mod test {
         let q: DateTime<Gregorian, Utc> = From::from(y2k);
         assert_eq!(q,
                    DateTime::<Gregorian, Utc>::new(2000, 1, 1, 0, 0, 0, 0).unwrap());
-
-        // Y2k converted into TCB will go through multiple conversions:
-        //   32 leap seconds
-        //   32.184 offset from TT
-        //   11 seconds and 252945542335510240 attoseconds SKEW of TCB
-        // FIXME with approx_eq
-        let tcb: DateTime<Gregorian, Tcb> = From::from(y2k);
-        let diff = tcb -
-            DateTime::<Gregorian, Tcb>::new_abnormal(2000, 1, 1, 0, 0, 32 + 32 + 11,
-                                                     184_000_000_000_000_000 +
-                                                     252_945_900_000_000_000);
-        assert!(diff.attos.abs() < 40_000_000);
     }
 }

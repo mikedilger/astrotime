@@ -7,9 +7,6 @@ use serde::{Serialize, Deserialize};
 use crate::duration::Duration;
 use crate::instant::Instant;
 
-const TCB_FACTOR: f64 = 1.550_505e-8;
-const TCG_FACTOR: f64 = 6.969_290_134e-10;
-
 /// A standard of time
 pub trait Standard: Debug + Sized + Clone {
     /// Short capital-letter abbreviation for the time standard (usually 2 or 3 letters)
@@ -63,60 +60,6 @@ impl Standard for Tt {
     }
 }
 impl Continuous for Tt { }
-
-/// Geocentric Coordinate Time
-///
-/// This is a continuous time standard for satellites that orbit the Earth
-/// See [Wikipedia](https://en.wikipedia.org/wiki/Geocentric_Coordinate_Time)
-///
-/// This type is proleptic. It was defined in 1991, to extrapolate back to
-/// January 1, 1977 at 00:00:32.184 TT where it syncronizes with TT.  All
-/// dates before this continue to extrapolate back.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
-pub struct Tcg;
-impl Standard for Tcg {
-
-    fn abbrev() -> &'static str {
-        "TCG"
-    }
-
-    fn to_tt(dur: Duration) -> Duration {
-        dur * (1.0 - TCG_FACTOR)
-    }
-
-    fn from_tt(dur: Duration) -> Duration {
-        dur * (1.0 / (1.0 - TCG_FACTOR))
-    }
-}
-impl Continuous for Tcg { }
-
-/// Barycentric Coordinate Time
-///
-/// This is a continuous time standard for satellites that orbit the Sun
-/// See [Wikipedia](https://en.wikipedia.org/wiki/Barycentric_Coordinate_Time)
-///
-/// This type is proleptic. It was defined in 1991, to extrapolate back to
-/// January 1, 1977 at 00:00:32.184 TT where it syncronizes with TT.  All
-/// dates before this continue to extrapolate back.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature ="serde", derive(Serialize, Deserialize))]
-pub struct Tcb;
-impl Standard for Tcb {
-
-    fn abbrev() -> &'static str {
-        "TCB"
-    }
-
-    fn to_tt(dur: Duration) -> Duration {
-        dur * (1.0 - TCB_FACTOR)
-    }
-
-    fn from_tt(dur: Duration) -> Duration {
-        dur * (1.0 / (1.0 - TCB_FACTOR))
-    }
-}
-impl Continuous for Tcb { }
 
 /// International Atomic Time
 ///
@@ -257,7 +200,7 @@ mod test {
     use crate::duration::Duration;
     use crate::calendar::Gregorian;
     use crate::instant::Instant;
-    use crate::standard::{Standard, Tt, Tai, Tcg, Utc};
+    use crate::standard::{Standard, Tt, Tai, Utc};
 
     #[test]
     fn test_to_from_tt() {
@@ -293,11 +236,6 @@ mod test {
             let b = Instant(Utc::to_tt(Utc::from_tt(a.0)));
             assert_eq!(a,b);
         }
-
-        let j = Tcg::to_tt(Tcg::from_tt(i));
-        assert_eq!(i.secs, j.secs);
-        assert!(i.attos - j.attos < 10400000);
-        assert!(i.attos - j.attos > -10400000);
     }
 
     #[test]
