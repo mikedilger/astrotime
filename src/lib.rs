@@ -28,6 +28,10 @@ pub use instant::Instant;
 mod standard;
 pub use standard::{Continuous, Standard, Tai, Tt, Utc};
 
+pub const ATTOS_PER_SEC_I64: i64 = 1_000_000_000_000_000_000;
+pub const ATTOS_PER_SEC_U64: u64 = 1_000_000_000_000_000_000;
+pub const ATTOS_PER_SEC_F64: f64 = 1_000_000_000_000_000_000.;
+
 // When running tests, we setup the logger
 #[cfg(test)]
 static INIT: std::sync::Once = std::sync::Once::new();

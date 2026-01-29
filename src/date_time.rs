@@ -12,6 +12,7 @@ use crate::calendar::{Calendar, Gregorian, Julian};
 use crate::duration::Duration;
 use crate::error::Error;
 use crate::standard::Standard;
+use crate::{ATTOS_PER_SEC_I64, ATTOS_PER_SEC_U64};
 
 /// A calendar date and time, with attosecond precision, representing the
 /// time elapsed since the start of the Common Era in a traditional way
@@ -228,11 +229,11 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
         // do it unconditionally.
 
         // roll up attoseconds into seconds (handling negative values)
-        let (div, modulus) = divmod_i64(attosecond, 1_000_000_000_000_000_000);
+        let (div, modulus) = divmod_i64(attosecond, ATTOS_PER_SEC_I64);
         second += div;
         attosecond = modulus;
         assert!(attosecond >= 0);
-        assert!(attosecond < 1_000_000_000_000_000_000);
+        assert!(attosecond < ATTOS_PER_SEC_I64);
 
         // roll up seconds into minutes (handling negative values)
         let (div, modulus) = divmod_i64(second, 60);
@@ -572,7 +573,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// Will return `Error::RangeError` if `attosecond` are out of the proscribed range
     /// (more than 1 seconds worth of attoseconds)
     pub const fn set_attosecond(&mut self, attosecond: u64) -> Result<(), Error> {
-        if attosecond > 1_000_000_000_000_000_000 {
+        if attosecond > ATTOS_PER_SEC_U64 {
             return Err(Error::RangeError);
         }
         self.attos = attosecond;
@@ -813,6 +814,7 @@ mod test {
     use crate::calendar::{Gregorian, Julian};
     use crate::duration::Duration;
     use crate::standard::Tt;
+    use crate::{ATTOS_PER_SEC_I64, ATTOS_PER_SEC_U64};
 
     #[test]
     fn test_range_errors() {
@@ -827,10 +829,7 @@ mod test {
         assert!(DateTime::<Gregorian, Tt>::new(2004, 2, 29, 24, 0, 0, 0).is_err());
         assert!(DateTime::<Gregorian, Tt>::new(2004, 2, 29, 0, 60, 0, 0).is_err());
         assert!(DateTime::<Gregorian, Tt>::new(2004, 2, 29, 0, 0, 61, 0).is_err());
-        assert!(
-            DateTime::<Gregorian, Tt>::new(2004, 2, 29, 0, 0, 0, 1_000_000_000_000_000_000)
-                .is_err()
-        );
+        assert!(DateTime::<Gregorian, Tt>::new(2004, 2, 29, 0, 0, 0, ATTOS_PER_SEC_U64).is_err());
 
         let _ = DateTime::<Gregorian, Tt>::new_abnormal(0, 1, 31, 0, 0, 0, 0);
         let _ = DateTime::<Gregorian, Tt>::new_abnormal(2000, 0, 31, 0, 0, 0, 0);
@@ -842,15 +841,7 @@ mod test {
         let _ = DateTime::<Gregorian, Tt>::new_abnormal(2004, 2, 29, 24, 0, 0, 0);
         let _ = DateTime::<Gregorian, Tt>::new_abnormal(2004, 2, 29, 0, 60, 0, 0);
         let _ = DateTime::<Gregorian, Tt>::new_abnormal(2004, 2, 29, 0, 0, 61, 0);
-        let _ = DateTime::<Gregorian, Tt>::new_abnormal(
-            2004,
-            2,
-            29,
-            0,
-            0,
-            0,
-            1_000_000_000_000_000_000,
-        );
+        let _ = DateTime::<Gregorian, Tt>::new_abnormal(2004, 2, 29, 0, 0, 0, ATTOS_PER_SEC_I64);
     }
 
     #[test]
@@ -1054,7 +1045,7 @@ mod test {
         assert_eq!(earlier.hour(), 23);
         assert_eq!(earlier.minute(), 59);
         assert_eq!(earlier.second(), 59);
-        assert_eq!(earlier.attosecond(), 1_000_000_000_000_000_000 - 100);
+        assert_eq!(earlier.attosecond(), ATTOS_PER_SEC_U64 - 100);
 
         let g1 = DateTime::<Gregorian, Tt>::new(2000, 1, 1, 0, 0, 0, 0).unwrap();
         let g2 = DateTime::<Gregorian, Tt>::new(2001, 2, 2, 1, 3, 5, 11).unwrap();

@@ -10,6 +10,7 @@ use crate::duration::Duration;
 use crate::epoch::Epoch;
 use crate::error::Error;
 use crate::standard::Standard;
+use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64};
 
 /// An `Instant` is a precise moment in time according to a particular time `Standard`.
 ///
@@ -37,7 +38,7 @@ impl Instant {
     pub fn from_julian_day_f64(jd: f64) -> Self {
         let fsecs = jd * 86400.0;
         let whole_secs = fsecs.trunc() as i64;
-        let attos = (fsecs.fract() * 1_000_000_000_000_000_000.) as i64;
+        let attos = (fsecs.fract() * ATTOS_PER_SEC_F64) as i64;
         Epoch::JulianPeriod.as_instant() + Duration::new(whole_secs, attos)
     }
 
@@ -51,7 +52,7 @@ impl Instant {
         // FIXME - range bound this
         let fsecs = day_fraction * 86400.;
         let mut whole_secs = fsecs.trunc() as i64;
-        let attos = (fsecs.fract() * 1_000_000_000_000_000_000.) as i64;
+        let attos = (fsecs.fract() * ATTOS_PER_SEC_F64) as i64;
         whole_secs += day * 86400;
         Epoch::JulianPeriod.as_instant() + Duration::new(whole_secs, attos)
     }
@@ -65,7 +66,7 @@ impl Instant {
     ///
     /// This will throw an `Error::RangeError` if the seconds are out of
     /// bounds (`0` <= `seconds` < `86_400`) or the attoseconds are out of bounds
-    /// (`0` <= `attoseconds` < `1_000_000_000_000_000_000`)
+    /// (`0` <= `attoseconds` < `ATTOS_PER_SEC_U64`)
     #[allow(clippy::manual_range_contains)]
     pub fn from_julian_day_precise(
         day: i64,
@@ -75,7 +76,7 @@ impl Instant {
         if seconds >= 86400 {
             return Err(Error::RangeError);
         }
-        if attoseconds < 0 || attoseconds >= 1_000_000_000_000_000_000 {
+        if attoseconds < 0 || attoseconds >= ATTOS_PER_SEC_I64 {
             return Err(Error::RangeError);
         }
         let secs = day * 86400 + i64::from(seconds);
@@ -87,7 +88,7 @@ impl Instant {
     #[allow(clippy::cast_precision_loss)]
     pub fn as_julian_day_f64(&self) -> f64 {
         let since = *self - Epoch::JulianPeriod.as_instant();
-        (since.secs as f64 + since.attos as f64 / 1_000_000_000_000_000_000.) / 86400.
+        (since.secs as f64 + since.attos as f64 / ATTOS_PER_SEC_F64) / 86400.
     }
 
     /// As Julian day (medium precision)
@@ -99,7 +100,7 @@ impl Instant {
         let since = *self - Epoch::JulianPeriod.as_instant();
         let day = since.secs / 86400;
         let rem = since.secs % 86400;
-        let frac = (rem as f64 + since.attos as f64 / 1_000_000_000_000_000_000.) / 86400.;
+        let frac = (rem as f64 + since.attos as f64 / ATTOS_PER_SEC_F64) / 86400.;
         (day, frac)
     }
 

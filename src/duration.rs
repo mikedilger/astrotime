@@ -1,3 +1,4 @@
+use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64};
 use std::convert::TryFrom;
 use std::fmt;
 use std::ops::{Add, Mul, Neg, Sub};
@@ -19,7 +20,7 @@ pub struct Duration {
     pub(crate) secs: i64,
 
     // attos are normalized such that
-    // -1_000_000_000_000_000_000 < attos < 1_000_000_000_000_000_000
+    // -ATTOS_PER_SEC_I64 < attos < ATTOS_PER_SEC_I64
     // and maintain the same sign as secs.
     pub(crate) attos: i64,
 }
@@ -28,13 +29,13 @@ impl Duration {
     pub(crate) const fn normalize(&mut self) {
         // This doesn't need divmod_i64 euclidean modulus because we reflect
         // negatives through zero
-        self.secs += self.attos / 1_000_000_000_000_000_000;
-        self.attos %= 1_000_000_000_000_000_000;
+        self.secs += self.attos / ATTOS_PER_SEC_I64;
+        self.attos %= ATTOS_PER_SEC_I64;
         if self.secs < 0 && self.attos > 0 {
-            self.attos -= 1_000_000_000_000_000_000;
+            self.attos -= ATTOS_PER_SEC_I64;
             self.secs += 1;
         } else if self.secs > 0 && self.attos < 0 {
-            self.attos += 1_000_000_000_000_000_000;
+            self.attos += ATTOS_PER_SEC_I64;
             self.secs -= 1;
         }
     }
@@ -66,7 +67,7 @@ impl Duration {
     /// This overflows on durations more than about 18 seconds.
     #[must_use]
     pub const fn as_attos(&self) -> Option<i64> {
-        let Some(sec_part) = self.secs.checked_mul(1_000_000_000_000_000_000) else {
+        let Some(sec_part) = self.secs.checked_mul(ATTOS_PER_SEC_I64) else {
             return None;
         };
         sec_part.checked_add(self.attos)
@@ -170,7 +171,7 @@ impl Mul<f64> for Duration {
     fn mul(self, rhs: f64) -> Self {
         let newsecs = self.secs as f64 * rhs;
         let secs = newsecs.trunc() as i64;
-        let overflow_attos = (newsecs.fract() * 1_000_000_000_000_000_000.) as i64;
+        let overflow_attos = (newsecs.fract() * ATTOS_PER_SEC_F64) as i64;
 
         let mut d = Self {
             secs,
@@ -201,6 +202,7 @@ impl TryFrom<std::time::Duration> for Duration {
 #[cfg(test)]
 mod test {
     use super::Duration;
+    use crate::ATTOS_PER_SEC_I64;
 
     #[test]
     fn test_duration_normalize() {
@@ -212,7 +214,7 @@ mod test {
         };
         d.normalize();
         assert_eq!(d.secs, 11);
-        assert_eq!(d.attos, 1_000_000_000_000_000_000 - 15);
+        assert_eq!(d.attos, ATTOS_PER_SEC_I64 - 15);
 
         let mut d = Duration {
             secs: -1,
