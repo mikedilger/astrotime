@@ -162,8 +162,8 @@ pub fn leap_seconds_elapsed(at: Instant) -> i64 {
 
     // NOTE: if our instants ever differ from TimeStandard, we need to run this
     // instead:
-    // let cmp = at + (Epoch::TimeStandard.as_instant() - Epoch::E1900_0.as_instant());
-    let cmp = at - Epoch::E1900_0.as_instant();
+    // let cmp = at + (Epoch::TimeStandard.as_instant() - Epoch::Ntp.as_instant());
+    let cmp = at - Epoch::Ntp.as_instant();
     let secs = cmp.seconds_part();
 
     trace!("Comparing seconds {} to leap second list", secs);
@@ -184,7 +184,7 @@ fn leap_seconds_elapsed_for_utc(mut unadjusted_dur: Duration) -> i64 {
 
     // Adjust the UTC based duration as close to TT as we can (all but leaps)
     unadjusted_dur = unadjusted_dur + Duration::new(9 + 32, 184_000_000_000_000_000);
-    let cmp = unadjusted_dur - Epoch::E1900_0.as_instant().0;
+    let cmp = unadjusted_dur - Epoch::Ntp.as_instant().0;
     let secs = cmp.seconds_part();
 
     trace!("Comparing seconds {} to leap second list (from UTC)", secs);

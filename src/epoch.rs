@@ -4,78 +4,79 @@ use crate::instant::Instant;
 /// A reference for a well known `Instant` in time, used for offsetting events from.
 pub enum Epoch {
     /// The start of the Julian Period,
-    /// which is 4713 BCE on Jan 1st Julian, 00:00:00.0
-    /// Specified in TT (in accordance with the International Astronomical Union since 1997)
-    // JD 0 (by definition)
+    /// which is 4713 BCE on Jan 1st Julian, 00:00:00.0 TT
+    /// JD 0 (by definition)
     JulianPeriod,
 
     /// The start of the Julian Calendar period,
-    /// which is January 1st, CE 1, 00:00:00.0 in the Julian calendar.
+    /// which is January 1st, CE 1, Julian, 00:00:00.0 TT
     /// Specified in TT
     /// Note that this is exactly two days prior to the Gregorian Epoch.
     ///
-    /// Not to be confused with the `JulianPeriodEpoch` which is much earlier.
-    // JD 1721423.5 (unverified, based on 2 day offset from Gregorian)
+    /// Not to be confused with the `Epoch::JulianPeriod` which is much earlier.
+    /// JD 1721423.5 (unverified, based on 2 day offset from Gregorian)
     JulianCalendar,
 
     /// The start of the Gregorian Calendar period,
-    /// which is January 1st, CE 1, 00:00:00.0 in the Gregorian calendar.
-    /// Specified in TT
-    // JD 1721425.5 (verified from https://en.wikipedia.org/wiki/Julian_day)
+    /// which is January 1st, CE 1, Gregorian, 00:00:00.0 TT
+    /// JD 1721425.5
     GregorianCalendar,
 
+    /// The Spreadsheet Epoch
+    /// Which is December 30, 1899 CE gregorian, 00:00:00.0 TT
+    /// This is the point from which dates in a spreadsheet are counted
+    /// as the (floating point) number of days since.
+    Spreadsheet,
+
     /// The J1900.0 astronomical epoch,
-    /// which is December 31, 1899 CE gregorian, 12:00:00.0
-    /// Specified in TT
-    // JD 2415020.0 (verified at https://www.astronomyclub.xyz/celestial-sphere-2/epochs-for-coordinate-systems.html
+    /// which is December 31, 1899 CE gregorian, 12:00:00.0 TT
+    /// JD 2415020.0 (verified at <https://www.astronomyclub.xyz/celestial-sphere-2/epochs-for-coordinate-systems.html>)
     J1900_0,
 
-    /// The 1900.0 astronomical epoch
-    /// which is January 1st, 1900 CE gregorian, 00:00:00.0
-    /// Specified in TT
-    // JD 2415020.5
-    E1900_0,
+    /// The NTP time base used in the IANA leap seconds file
+    /// which is January 1st, 1900 CE gregorian, 00:00:00.0 UTC
+    /// JD 2415020.500476666666
+    Ntp,
 
+    // Our future `TimeStandard` zero point
+    // which is January 1st, 1970 CE gregorian, 00:00:00.0 TAI
+    // JD 2440587.5003725
+    //TimeStandard,
     /// The UNIX Epoch,
-    /// which is January 1st, 1970 CE gregorian, 00:00:00.0
-    /// Specified in UTC
-    // JD 2440587.5 (approx, modify for UTC)
+    /// which is January 1st, 1970 CE gregorian, 00:00:00.0 UTC
+    /// JD 2440587.500476666666
     Unix,
 
-    /// The Time Standard Epoch where TT, TCB, and TCG all read the same.
-    /// which is January 1st, 1977 CE gregorian, 00:00:32.184
-    /// Specified in TT, TCB and TCG, where they align
-    // JD 2443144.5003725 (https://en.wikipedia.org/wiki/International_Atomic_Time)
+    /// The epoch where TT, TCB, and TCG all read the same.
+    /// which is January 1st, 1977 CE gregorian, 00:00:00 TAI
+    /// JD 2443144.5003725 (verified at <https://en.wikipedia.org/wiki/International_Atomic_Time>)
+    // to rename TcbTcgEphemeris when we switch time standards
     TimeStandard,
 
     /// The J1991.25 astronomical epoch,
-    /// which is April 2, 1991 CE gregorian, 13:30:00.0
-    /// Specified in TT
-    // JD 2448349.0625 (verified at https://www.astronomyclub.xyz/celestial-sphere-2/epochs-for-coordinate-systems.html
+    /// which is April 2, 1991 CE gregorian, 13:30:00.0 TT
+    /// JD 2448349.0625 (verified at <https://www.astronomyclub.xyz/celestial-sphere-2/epochs-for-coordinate-systems.html>)
     J1991_25,
 
     /// The Year 2000
-    /// which is January 1st, 2000 CE gregorian, 00:00:00.0
-    /// Specified in UTC
-    // JD 2451544.5 (approx, modify for UTC)
+    /// which is January 1st, 2000 CE gregorian, 00:00:00.0 UTC
+    /// JD 2451544.5007428704
     Y2k,
 
     /// The J2000.0 astronomical epoch,
-    /// which is January 1, 2000 CE gregorian, 12:00:00.0
-    /// Specified in TT
-    // JD 2451545.0 (verified at https://www.astronomyclub.xyz/celestial-sphere-2/epochs-for-coordinate-systems.html
+    /// which is January 1, 2000 CE gregorian, 12:00:00.0 TT
+    /// JD 2451545.0 (verified at <https://www.astronomyclub.xyz/celestial-sphere-2/epochs-for-coordinate-systems.html>)
+    /// (verified at <https://en.wikipedia.org/wiki/Epoch_(astronomy)>)
     J2000_0,
 
     /// The J2100.0 astronomical epoch,
-    /// which is January 1, 2100 CE gregorian, 12:00:00.0
-    /// Specified in TT
-    // JD 2488070.0 (verified at https://www.astronomyclub.xyz/celestial-sphere-2/epochs-for-coordinate-systems.html
+    /// which is January 1, 2100 CE gregorian, 12:00:00.0 TT
+    /// JD 2488070.0 (verified at <https://www.astronomyclub.xyz/celestial-sphere-2/epochs-for-coordinate-systems.html>)
     J2100_0,
 
     /// The J2200.0 astronomical epoch,
-    /// which is January 2, 2200 CE gregorian, 12:00:00.0
-    /// Specified in TT
-    // JD 2524595.0 (verified at https://www.astronomyclub.xyz/celestial-sphere-2/epochs-for-coordinate-systems.html
+    /// which is January 2, 2200 CE gregorian, 12:00:00.0 TT
+    /// JD 2524595.0 (verified at <https://www.astronomyclub.xyz/celestial-sphere-2/epochs-for-coordinate-systems.html>)
     J2200_0,
 }
 
@@ -97,13 +98,17 @@ impl Epoch {
                 secs: -62_356_521_632,
                 attos: -184_000_000_000_000_000,
             }),
+            Self::Spreadsheet => Instant(Duration {
+                secs: -2_430_086_432,
+                attos: -184_000_000_000_000_000,
+            }),
             Self::J1900_0 => Instant(Duration {
                 secs: -2_429_956_832,
                 attos: -184_000_000_000_000_000,
             }),
-            Self::E1900_0 => Instant(Duration {
-                secs: -2_429_913_632,
-                attos: -184_000_000_000_000_000,
+            Self::Ntp => Instant(Duration {
+                secs: -2_429_913_591,
+                attos: -0,
             }),
             Self::Unix => Instant(Duration {
                 secs: -220_924_791,
@@ -140,119 +145,106 @@ mod test {
     use crate::calendar::{Gregorian, Julian};
     use crate::date_time::DateTime;
     use crate::instant::Instant;
-    use crate::standard::{Tt, Utc};
+    use crate::standard::{Tai, Tt, Utc};
+
+    macro_rules! epoch_check {
+        ($epoch:expr, $cal:ty, $std:ty, $def:expr) => {
+            let instant = $epoch.as_instant();
+            let dt: DateTime<$cal, $std> = From::from(instant);
+            assert_eq!(dt, $def);
+            let check: Instant = From::from(dt);
+            assert_eq!(instant, check);
+        };
+    }
 
     #[test]
     fn check_epochs_and_conversion() {
         crate::setup_logging();
 
-        let instant = Epoch::JulianCalendar.as_instant();
-        let dt: DateTime<Julian, Tt> = From::from(instant);
-        assert_eq!(
-            dt,
-            DateTime::<Julian, Tt>::new(1, 1, 1, 0, 0, 0, 0).unwrap()
-        );
-        let check: Instant = From::from(dt);
-        assert_eq!(instant, check);
-
-        let instant = Epoch::GregorianCalendar.as_instant();
-        let dt: DateTime<Gregorian, Tt> = From::from(instant);
-        assert_eq!(
-            dt,
-            DateTime::<Gregorian, Tt>::new(1, 1, 1, 0, 0, 0, 0).unwrap()
-        );
-        let check: Instant = From::from(dt);
-        assert_eq!(instant, check);
-
-        let instant = Epoch::JulianPeriod.as_instant();
-        let dt: DateTime<Julian, Tt> = From::from(instant);
-        assert_eq!(
-            dt,
+        epoch_check!(
+            Epoch::JulianPeriod,
+            Julian,
+            Tt,
             DateTime::<Julian, Tt>::new_bc(4713, 1, 1, 12, 0, 0, 0).unwrap()
         );
-        let check: Instant = From::from(dt);
-        assert_eq!(instant, check);
-
-        let instant = Epoch::J1900_0.as_instant();
-        let dt: DateTime<Gregorian, Tt> = From::from(instant);
-        assert_eq!(
-            dt,
+        epoch_check!(
+            Epoch::JulianCalendar,
+            Julian,
+            Tt,
+            DateTime::<Julian, Tt>::new(1, 1, 1, 0, 0, 0, 0).unwrap()
+        );
+        epoch_check!(
+            Epoch::GregorianCalendar,
+            Gregorian,
+            Tt,
+            DateTime::<Gregorian, Tt>::new(1, 1, 1, 0, 0, 0, 0).unwrap()
+        );
+        epoch_check!(
+            Epoch::Spreadsheet,
+            Gregorian,
+            Tt,
+            DateTime::<Gregorian, Tt>::new(1899, 12, 30, 0, 0, 0, 0).unwrap()
+        );
+        epoch_check!(
+            Epoch::J1900_0,
+            Gregorian,
+            Tt,
             DateTime::<Gregorian, Tt>::new(1899, 12, 31, 12, 0, 0, 0).unwrap()
         );
-        let check: Instant = From::from(dt);
-        assert_eq!(instant, check);
-
-        let instant = Epoch::E1900_0.as_instant();
-        let dt: DateTime<Gregorian, Tt> = From::from(instant);
-        assert_eq!(
-            dt,
-            DateTime::<Gregorian, Tt>::new(1900, 1, 1, 0, 0, 0, 0).unwrap()
+        epoch_check!(
+            Epoch::Ntp,
+            Gregorian,
+            Utc,
+            DateTime::<Gregorian, Utc>::new(1900, 1, 1, 0, 0, 0, 0).unwrap()
         );
-        let check: Instant = From::from(dt);
-        assert_eq!(instant, check);
-
-        let instant = Epoch::J1991_25.as_instant();
-        let dt: DateTime<Gregorian, Tt> = From::from(instant);
-        assert_eq!(
-            dt,
-            DateTime::<Gregorian, Tt>::new(1991, 4, 2, 13, 30, 0, 0).unwrap()
-        );
-        let check: Instant = From::from(dt);
-        assert_eq!(instant, check);
-
-        let instant = Epoch::J2000_0.as_instant();
-        let dt: DateTime<Gregorian, Tt> = From::from(instant);
-        assert_eq!(
-            dt,
-            DateTime::<Gregorian, Tt>::new(2000, 1, 1, 12, 0, 0, 0).unwrap()
-        );
-        let check: Instant = From::from(dt);
-        assert_eq!(instant, check);
-
-        let instant = Epoch::J2100_0.as_instant();
-        let dt: DateTime<Gregorian, Tt> = From::from(instant);
-        assert_eq!(
-            dt,
-            DateTime::<Gregorian, Tt>::new(2100, 1, 1, 12, 0, 0, 0).unwrap()
-        );
-        let check: Instant = From::from(dt);
-        assert_eq!(instant, check);
-
-        let instant = Epoch::J2200_0.as_instant();
-        let dt: DateTime<Gregorian, Tt> = From::from(instant);
-        assert_eq!(
-            dt,
-            DateTime::<Gregorian, Tt>::new(2200, 1, 2, 12, 0, 0, 0).unwrap()
-        );
-        let check: Instant = From::from(dt);
-        assert_eq!(instant, check);
-
-        let instant = Epoch::Unix.as_instant();
-        let dt: DateTime<Gregorian, Utc> = From::from(instant);
-        assert_eq!(
-            dt,
-            DateTime::<Gregorian, Utc>::new(1970, 1, 1, 0, 0, 0, 0).unwrap()
-        );
-        let check: Instant = From::from(dt);
-        assert_eq!(instant, check);
-
-        let instant = Epoch::Y2k.as_instant();
-        let dt: DateTime<Gregorian, Utc> = From::from(instant);
-        assert_eq!(
-            dt,
-            DateTime::<Gregorian, Utc>::new(2000, 1, 1, 0, 0, 0, 0).unwrap()
-        );
-        let check: Instant = From::from(dt);
-        assert_eq!(instant, check);
-
-        let instant = Epoch::TimeStandard.as_instant();
-        let dt: DateTime<Gregorian, Tt> = From::from(instant);
-        assert_eq!(
-            dt,
+        epoch_check!(
+            Epoch::TimeStandard,
+            Gregorian,
+            Tt,
             DateTime::<Gregorian, Tt>::new(1977, 1, 1, 0, 0, 32, 184_000_000_000_000_000).unwrap()
         );
-        let check: Instant = From::from(dt);
-        assert_eq!(instant, check);
+        epoch_check!(
+            Epoch::Unix,
+            Gregorian,
+            Utc,
+            DateTime::<Gregorian, Utc>::new(1970, 1, 1, 0, 0, 0, 0).unwrap()
+        );
+        //epoch_check!(
+        //    Epoch::TcbTcgEphemeris,
+        //    Gregorian,
+        //    Tai,
+        //    DateTime::<Gregorian, Tai>::new(1977, 1, 1, 0, 0, 0, 0).unwrap()
+        //);
+        epoch_check!(
+            Epoch::J1991_25,
+            Gregorian,
+            Tt,
+            DateTime::<Gregorian, Tt>::new(1991, 4, 2, 13, 30, 0, 0).unwrap()
+        );
+        epoch_check!(
+            Epoch::Y2k,
+            Gregorian,
+            Utc,
+            DateTime::<Gregorian, Utc>::new(2000, 1, 1, 0, 0, 0, 0).unwrap()
+        );
+        epoch_check!(
+            Epoch::J2000_0,
+            Gregorian,
+            Tt,
+            DateTime::<Gregorian, Tt>::new(2000, 1, 1, 12, 0, 0, 0).unwrap()
+        );
+        epoch_check!(
+            Epoch::J2100_0,
+            Gregorian,
+            Tt,
+            DateTime::<Gregorian, Tt>::new(2100, 1, 1, 12, 0, 0, 0).unwrap()
+        );
+        epoch_check!(
+            Epoch::J2200_0,
+            Gregorian,
+            Tt,
+            DateTime::<Gregorian, Tt>::new(2200, 1, 2, 12, 0, 0, 0).unwrap()
+        );
     }
 
     #[test]
