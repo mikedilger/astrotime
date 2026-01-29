@@ -118,10 +118,8 @@ impl Instant {
     #[must_use]
     pub fn as_julian_day_formatted(&self) -> String {
         let (day, frac) = self.as_julian_day_parts();
-        let fraction = format!("{}", frac)
-            .trim_start_matches(|c| c == '-' || c == '0')
-            .to_owned();
-        format!("JD {}{}", day, fraction)
+        let fraction = format!("{frac}").trim_start_matches(['-', '0']).to_owned();
+        format!("JD {day}{fraction}")
     }
 }
 

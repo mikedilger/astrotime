@@ -77,14 +77,14 @@ const MONTH0_OFFSET: usize = 0;
 
 // Pack a value into the packed field
 #[inline]
-fn pack(packed: &mut u64, bits: u64, offset: usize, value: u64) {
+const fn pack(packed: &mut u64, bits: u64, offset: usize, value: u64) {
     *packed &= !bits; // zero
     *packed |= value << offset; // set
 }
 
 // Pack a value into the packed field, only if you know it's already zero
 #[inline]
-fn pack_without_clearing(packed: &mut u64, offset: usize, value: u64) {
+const fn pack_without_clearing(packed: &mut u64, offset: usize, value: u64) {
     *packed |= value << offset; // set
 }
 
@@ -104,7 +104,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     #[allow(clippy::cast_sign_loss)]
     #[allow(clippy::cast_lossless)]
     #[must_use]
-    pub unsafe fn new_unchecked(
+    pub const unsafe fn new_unchecked(
         year: i32,
         month: u8,
         day: u8,
@@ -366,7 +366,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     #[allow(clippy::cast_possible_truncation)]
     #[must_use]
     #[inline]
-    pub fn year(&self) -> i32 {
+    pub const fn year(&self) -> i32 {
         unpack(self.packed, YEAR_BITS, YEAR_OFFSET) as i32
     }
 
@@ -374,7 +374,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     #[allow(clippy::cast_possible_truncation)]
     #[must_use]
     #[inline]
-    pub fn year_bc(&self) -> i32 {
+    pub const fn year_bc(&self) -> i32 {
         1 - self.year()
     }
 
@@ -382,7 +382,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     #[allow(clippy::cast_possible_truncation)]
     #[must_use]
     #[inline]
-    pub fn month(&self) -> u8 {
+    pub const fn month(&self) -> u8 {
         unpack(self.packed, MONTH0_BITS, MONTH0_OFFSET) as u8 + 1
     }
 
@@ -390,7 +390,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     #[allow(clippy::cast_possible_truncation)]
     #[must_use]
     #[inline]
-    pub fn month0(&self) -> u8 {
+    pub const fn month0(&self) -> u8 {
         unpack(self.packed, MONTH0_BITS, MONTH0_OFFSET) as u8
     }
 
@@ -398,7 +398,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     #[allow(clippy::cast_possible_truncation)]
     #[must_use]
     #[inline]
-    pub fn day(&self) -> u8 {
+    pub const fn day(&self) -> u8 {
         unpack(self.packed, DAY0_BITS, DAY0_OFFSET) as u8 + 1
     }
 
@@ -406,7 +406,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     #[allow(clippy::cast_possible_truncation)]
     #[must_use]
     #[inline]
-    pub fn day0(&self) -> u8 {
+    pub const fn day0(&self) -> u8 {
         unpack(self.packed, DAY0_BITS, DAY0_OFFSET) as u8
     }
 
@@ -414,7 +414,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     #[allow(clippy::cast_possible_truncation)]
     #[must_use]
     #[inline]
-    pub fn hour(&self) -> u8 {
+    pub const fn hour(&self) -> u8 {
         unpack(self.packed, HOUR_BITS, HOUR_OFFSET) as u8
     }
 
@@ -422,7 +422,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     #[allow(clippy::cast_possible_truncation)]
     #[must_use]
     #[inline]
-    pub fn minute(&self) -> u8 {
+    pub const fn minute(&self) -> u8 {
         unpack(self.packed, MINUTE_BITS, MINUTE_OFFSET) as u8
     }
 
@@ -430,14 +430,14 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     #[allow(clippy::cast_possible_truncation)]
     #[must_use]
     #[inline]
-    pub fn second(&self) -> u8 {
+    pub const fn second(&self) -> u8 {
         unpack(self.packed, SECOND_BITS, SECOND_OFFSET) as u8
     }
 
     /// The attosecond part. Ranges from `0` .. `999_999_999_999_999_999`
     #[must_use]
     #[inline]
-    pub fn attosecond(&self) -> u64 {
+    pub const fn attosecond(&self) -> u64 {
         self.attos
     }
 
@@ -446,7 +446,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// Returns (year, month, day)
     #[must_use]
     #[inline]
-    pub fn date(&self) -> (i32, u8, u8) {
+    pub const fn date(&self) -> (i32, u8, u8) {
         (self.year(), self.month(), self.day())
     }
 
@@ -455,14 +455,14 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// Returns (hour, minute, second, attosecond)
     #[must_use]
     #[inline]
-    pub fn time(&self) -> (u8, u8, u8, u64) {
+    pub const fn time(&self) -> (u8, u8, u8, u64) {
         (self.hour(), self.minute(), self.second(), self.attosecond())
     }
 
     /// Set the year, leaving other fields unchanged
     #[inline]
     #[allow(clippy::cast_sign_loss)]
-    pub fn set_year(&mut self, year: i32) {
+    pub const fn set_year(&mut self, year: i32) {
         // "year as u64" treats the sign bit as a bit in the MSB, which is what we want,
         // because we must preserve negative years in our packing.
         pack(&mut self.packed, YEAR_BITS, YEAR_OFFSET, year as u64);
@@ -471,7 +471,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// Set the year with a BC year, leaving other fields unchanged
     #[inline]
     #[allow(clippy::cast_sign_loss)]
-    pub fn set_year_bc(&mut self, year_bc: i32) {
+    pub const fn set_year_bc(&mut self, year_bc: i32) {
         let year = 1 - year_bc;
         // "year as u64" treats the sign bit as a bit in the MSB, which is what we want,
         // because we must preserve negative years in our packing.
@@ -571,7 +571,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     ///
     /// Will return `Error::RangeError` if `attosecond` are out of the proscribed range
     /// (more than 1 seconds worth of attoseconds)
-    pub fn set_attosecond(&mut self, attosecond: u64) -> Result<(), Error> {
+    pub const fn set_attosecond(&mut self, attosecond: u64) -> Result<(), Error> {
         if attosecond > 1_000_000_000_000_000_000 {
             return Err(Error::RangeError);
         }
@@ -633,7 +633,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
         (u64::from(self.hour()) * 3600 * FACTOR
             + u64::from(self.minute()) * 60 * FACTOR
             + u64::from(self.second()) * FACTOR
-            + (self.attosecond() / 10000) as u64) as f64
+            + (self.attosecond() / 10000)) as f64
             / 8_640_000_000_000_000_000.
     }
 
@@ -704,7 +704,7 @@ impl<C: Calendar, S: Standard> Add<Duration> for DateTime<C, S> {
             i64::from(self.hour()),
             i64::from(self.minute()),
             i64::from(self.second()) + rhs.seconds_part(),
-            self.attosecond() as i64 + rhs.attos_part() as i64,
+            self.attosecond() as i64 + rhs.attos_part(),
         )
     }
 }
@@ -721,7 +721,7 @@ impl<C: Calendar, S: Standard> Sub<Duration> for DateTime<C, S> {
             i64::from(self.hour()),
             i64::from(self.minute()),
             i64::from(self.second()) - rhs.seconds_part(),
-            self.attosecond() as i64 - rhs.attos_part() as i64,
+            self.attosecond() as i64 - rhs.attos_part(),
         )
     }
 }

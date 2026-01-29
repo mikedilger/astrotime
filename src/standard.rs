@@ -121,7 +121,8 @@ impl Standard for Utc {
 // Expires 28 June 2026
 #[allow(clippy::unreadable_literal)]
 fn iana_ntp_leap_seconds() -> Vec<i64> {
-    vec![                                     // Unixtime
+    vec![
+        // Unixtime
         2272060800, //	10	# 1 Jan 1972      // 63072000
         2287785600, //	11	# 1 Jul 1972      // 78796800
         2303683200, //	12	# 1 Jan 1973      // 94694400
@@ -155,6 +156,7 @@ fn iana_ntp_leap_seconds() -> Vec<i64> {
 
 // This returns how many leap seconds have passed.
 // (if the instant is inside of a leap second, that one does not get counted yet)
+#[allow(clippy::cast_possible_wrap)] // fixed input data won't wrap
 pub fn leap_seconds_elapsed(at: Instant) -> i64 {
     use crate::epoch::Epoch;
 
@@ -170,12 +172,13 @@ pub fn leap_seconds_elapsed(at: Instant) -> i64 {
         .iter()
         .enumerate()
         .find(|(_n, &leap)| secs < leap)
-        .map_or(iana_ntp_leap_seconds().len(), |(n, _d)| n) as i64
+        .map_or_else(|| iana_ntp_leap_seconds().len(), |(n, _d)| n) as i64
 }
 
 // Similar to leap_seconds_elapsed(), but using an incorrect/unadjusted duration
 // computed using UTC as if there were no leap seconds. This function is for
 // converting from UTC to TAI.
+#[allow(clippy::cast_possible_wrap)] // fixed input data won't wrap
 fn leap_seconds_elapsed_for_utc(mut unadjusted_dur: Duration) -> i64 {
     use crate::epoch::Epoch;
 
@@ -191,7 +194,7 @@ fn leap_seconds_elapsed_for_utc(mut unadjusted_dur: Duration) -> i64 {
         .enumerate()
         .map(|(n, leap)| (n, leap - n as i64)) // each leap successively drug backwards
         .find(|(_n, leap)| secs < *leap)
-        .map_or(iana_ntp_leap_seconds().len(), |(n, _d)| n) as i64
+        .map_or_else(|| iana_ntp_leap_seconds().len(), |(n, _d)| n) as i64
 }
 
 #[cfg(test)]

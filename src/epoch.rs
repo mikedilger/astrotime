@@ -85,48 +85,48 @@ impl Epoch {
     pub const fn as_instant(&self) -> Instant {
         match *self {
             // NOTE: all instants are internally represented in TT standard.
-            Epoch::JulianPeriod => Instant(Duration {
+            Self::JulianPeriod => Instant(Duration {
                 secs: -211_087_684_832,
                 attos: -184_000_000_000_000_000,
             }),
-            Epoch::JulianCalendar => Instant(Duration {
+            Self::JulianCalendar => Instant(Duration {
                 secs: -62_356_694_432,
                 attos: -184_000_000_000_000_000,
             }),
-            Epoch::GregorianCalendar => Instant(Duration {
+            Self::GregorianCalendar => Instant(Duration {
                 secs: -62_356_521_632,
                 attos: -184_000_000_000_000_000,
             }),
-            Epoch::J1900_0 => Instant(Duration {
+            Self::J1900_0 => Instant(Duration {
                 secs: -2_429_956_832,
                 attos: -184_000_000_000_000_000,
             }),
-            Epoch::E1900_0 => Instant(Duration {
+            Self::E1900_0 => Instant(Duration {
                 secs: -2_429_913_632,
                 attos: -184_000_000_000_000_000,
             }),
-            Epoch::Unix => Instant(Duration {
+            Self::Unix => Instant(Duration {
                 secs: -220_924_791,
                 attos: 0,
             }),
-            Epoch::TimeStandard => Instant(Duration { secs: 0, attos: 0 }),
-            Epoch::J1991_25 => Instant(Duration {
+            Self::TimeStandard => Instant(Duration { secs: 0, attos: 0 }),
+            Self::J1991_25 => Instant(Duration {
                 secs: 449_674_167,
                 attos: 816_000_000_000_000_000,
             }),
-            Epoch::Y2k => Instant(Duration {
+            Self::Y2k => Instant(Duration {
                 secs: 725_760_032,
                 attos: 0,
             }),
-            Epoch::J2000_0 => Instant(Duration {
+            Self::J2000_0 => Instant(Duration {
                 secs: 725_803_167,
                 attos: 816_000_000_000_000_000,
             }),
-            Epoch::J2100_0 => Instant(Duration {
+            Self::J2100_0 => Instant(Duration {
                 secs: 3_881_563_167,
                 attos: 816_000_000_000_000_000,
             }),
-            Epoch::J2200_0 => Instant(Duration {
+            Self::J2200_0 => Instant(Duration {
                 secs: 7_037_323_167,
                 attos: 816_000_000_000_000_000,
             }),

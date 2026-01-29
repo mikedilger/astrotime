@@ -26,7 +26,7 @@ mod instant;
 pub use instant::Instant;
 
 mod standard;
-pub use standard::{Standard, Tai, Tt, Utc};
+pub use standard::{Continuous, Standard, Tai, Tt, Utc};
 
 // When running tests, we setup the logger
 #[cfg(test)]

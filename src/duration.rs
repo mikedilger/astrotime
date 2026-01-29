@@ -25,10 +25,10 @@ pub struct Duration {
 }
 
 impl Duration {
-    pub(crate) fn normalize(&mut self) {
+    pub(crate) const fn normalize(&mut self) {
         // This doesn't need divmod_i64 euclidean modulus because we reflect
         // negatives through zero
-        self.secs += (self.attos / 1_000_000_000_000_000_000) as i64;
+        self.secs += self.attos / 1_000_000_000_000_000_000;
         self.attos %= 1_000_000_000_000_000_000;
         if self.secs < 0 && self.attos > 0 {
             self.attos -= 1_000_000_000_000_000_000;
@@ -41,7 +41,7 @@ impl Duration {
 
     /// Make a new `Duration` with given number of seconds and attoseconds.
     #[must_use]
-    pub fn new(secs: i64, attos: i64) -> Self {
+    pub const fn new(secs: i64, attos: i64) -> Self {
         let mut d = Self { secs, attos };
         d.normalize();
         d
@@ -66,11 +66,10 @@ impl Duration {
     /// This overflows on durations more than about 18 seconds.
     #[must_use]
     pub const fn as_attos(&self) -> Option<i64> {
-        let sec_part = match self.secs.checked_mul(1_000_000_000_000_000_000) {
-            Some(ns) => ns,
-            None => return None,
+        let Some(sec_part) = self.secs.checked_mul(1_000_000_000_000_000_000) else {
+            return None;
         };
-        sec_part.checked_add(self.attos as i64)
+        sec_part.checked_add(self.attos)
     }
 
     /// Determine if the duration is zero
@@ -96,7 +95,7 @@ impl fmt::Display for Duration {
         let days = s / 86400;
         s %= 86400; // only days should show any negative values
         if days != 0 {
-            write!(f, "{}D", days)?;
+            write!(f, "{days}D")?;
         }
 
         if s != 0 || a != 0 {
@@ -106,19 +105,19 @@ impl fmt::Display for Duration {
         let hours = s / 3600;
         s %= 3600;
         if hours != 0 {
-            write!(f, "{}H", hours)?;
+            write!(f, "{hours}H")?;
         }
 
         let minutes = s / 60;
         s %= 60;
         if minutes != 0 {
-            write!(f, "{}M", minutes)?;
+            write!(f, "{minutes}M")?;
         }
         if s != 0 || a != 0 {
             if a == 0 {
-                write!(f, "{}S", s)?;
+                write!(f, "{s}S")?;
             } else {
-                write!(f, "{}.{:018}S", s, a)?;
+                write!(f, "{s}.{a:018}S")?;
             }
         }
         Ok(())
