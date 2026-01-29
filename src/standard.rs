@@ -117,40 +117,39 @@ impl Standard for Utc {
             - Duration::new(leap_seconds_elapsed(Instant(dur)), 0) // leaps on or after 1972
     }
 }
-
-// https://www.ietf.org/timezones/data/leap-seconds.list
-// FIXME: fetch the list dynamically if the user allows
+// https://data.iana.org/time-zones/data/leap-seconds.list
+// Expires 28 June 2026
 #[allow(clippy::unreadable_literal)]
-fn leap_seconds() -> Vec<i64> {
-    vec![
-        2272060800, //	10	# 1 Jan 1972
-        2287785600, //	11	# 1 Jul 1972
-        2303683200, //	12	# 1 Jan 1973
-        2335219200, //	13	# 1 Jan 1974
-        2366755200, //	14	# 1 Jan 1975
-        2398291200, //	15	# 1 Jan 1976
-        2429913600, //	16	# 1 Jan 1977
-        2461449600, //	17	# 1 Jan 1978
-        2492985600, //	18	# 1 Jan 1979
-        2524521600, //	19	# 1 Jan 1980
-        2571782400, //	20	# 1 Jul 1981
-        2603318400, //	21	# 1 Jul 1982
-        2634854400, //	22	# 1 Jul 1983
-        2698012800, //	23	# 1 Jul 1985
-        2776982400, //	24	# 1 Jan 1988
-        2840140800, //	25	# 1 Jan 1990
-        2871676800, //	26	# 1 Jan 1991
-        2918937600, //	27	# 1 Jul 1992
-        2950473600, //	28	# 1 Jul 1993
-        2982009600, //	29	# 1 Jul 1994
-        3029443200, //	30	# 1 Jan 1996
-        3076704000, //	31	# 1 Jul 1997
-        3124137600, //	32	# 1 Jan 1999
-        3345062400, //	33	# 1 Jan 2006
-        3439756800, //	34	# 1 Jan 2009
-        3550089600, //	35	# 1 Jul 2012
-        3644697600, //	36	# 1 Jul 2015
-        3692217600, //	37	# 1 Jan 2017
+fn iana_ntp_leap_seconds() -> Vec<i64> {
+    vec![                                     // Unixtime
+        2272060800, //	10	# 1 Jan 1972      // 63072000
+        2287785600, //	11	# 1 Jul 1972      // 78796800
+        2303683200, //	12	# 1 Jan 1973      // 94694400
+        2335219200, //	13	# 1 Jan 1974      // 126230400
+        2366755200, //	14	# 1 Jan 1975      // 157766400
+        2398291200, //	15	# 1 Jan 1976      // 189302400
+        2429913600, //	16	# 1 Jan 1977      // 220924800
+        2461449600, //	17	# 1 Jan 1978      // 252460800
+        2492985600, //	18	# 1 Jan 1979      // 283996800
+        2524521600, //	19	# 1 Jan 1980      // 315532800
+        2571782400, //	20	# 1 Jul 1981      // 362793600
+        2603318400, //	21	# 1 Jul 1982      // 394329600
+        2634854400, //	22	# 1 Jul 1983      // 425865600
+        2698012800, //	23	# 1 Jul 1985      // 489024000
+        2776982400, //	24	# 1 Jan 1988      // 567993600
+        2840140800, //	25	# 1 Jan 1990      // 631152000
+        2871676800, //	26	# 1 Jan 1991      // 662688000
+        2918937600, //	27	# 1 Jul 1992      // 709948800
+        2950473600, //	28	# 1 Jul 1993      // 741484800
+        2982009600, //	29	# 1 Jul 1994      // 773020800
+        3029443200, //	30	# 1 Jan 1996      // 820454400
+        3076704000, //	31	# 1 Jul 1997      // 867715200
+        3124137600, //	32	# 1 Jan 1999      // 915148800
+        3345062400, //	33	# 1 Jan 2006      // 1136073600
+        3439756800, //	34	# 1 Jan 2009      // 1230768000
+        3550089600, //	35	# 1 Jul 2012      // 1341100800
+        3644697600, //	36	# 1 Jul 2015      // 1435708800
+        3692217600, //	37	# 1 Jan 2017      // 1483228800
     ]
 }
 
@@ -167,11 +166,11 @@ pub fn leap_seconds_elapsed(at: Instant) -> i64 {
 
     trace!("Comparing seconds {} to leap second list", secs);
 
-    leap_seconds()
+    iana_ntp_leap_seconds()
         .iter()
         .enumerate()
         .find(|(_n, &leap)| secs < leap)
-        .map_or(leap_seconds().len(), |(n, _d)| n) as i64
+        .map_or(iana_ntp_leap_seconds().len(), |(n, _d)| n) as i64
 }
 
 // Similar to leap_seconds_elapsed(), but using an incorrect/unadjusted duration
@@ -187,12 +186,12 @@ fn leap_seconds_elapsed_for_utc(mut unadjusted_dur: Duration) -> i64 {
 
     trace!("Comparing seconds {} to leap second list (from UTC)", secs);
 
-    leap_seconds()
+    iana_ntp_leap_seconds()
         .iter()
         .enumerate()
         .map(|(n, leap)| (n, leap - n as i64)) // each leap successively drug backwards
         .find(|(_n, leap)| secs < *leap)
-        .map_or(leap_seconds().len(), |(n, _d)| n) as i64
+        .map_or(iana_ntp_leap_seconds().len(), |(n, _d)| n) as i64
 }
 
 #[cfg(test)]
