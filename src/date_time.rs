@@ -442,6 +442,14 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
         self.attos
     }
 
+    /// The day of the week from 1 (Monday) .. 7 (Sunday) (ISO 8601)
+    #[must_use]
+    #[inline]
+    pub fn weekday(&self) -> u8 {
+        let offset = if C::is_gregorian() { 0 } else { 5 };
+        (self.day_number() + offset).rem_euclid(7) as u8 + 1
+    }
+
     /// The date part
     ///
     /// Returns (year, month, day)
@@ -1146,5 +1154,13 @@ mod test {
         let g = DateTime::<Julian, Tt>::new(1582, 10, 14, 11, 0, 5, 130).unwrap();
         let h = DateTime::<Julian, Tt>::from_duration_from_epoch(g.duration_from_epoch());
         assert_eq!(g, h);
+    }
+
+    #[test]
+    fn test_weekday() {
+        let g = DateTime::<Gregorian, Tt>::new(2026, 2, 1, 12, 0, 0, 0).unwrap();
+        assert_eq!(g.weekday(), 7);
+        let j = DateTime::<Julian, Tt>::new(2026, 1, 19, 12, 0, 0, 0).unwrap();
+        assert_eq!(j.weekday(), 7);
     }
 }
