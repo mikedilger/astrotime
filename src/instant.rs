@@ -30,6 +30,17 @@ use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64};
 pub struct Instant(pub(crate) Duration);
 
 impl Instant {
+    /// The current instant
+    ///
+    /// # Errors
+    ///
+    /// If the system time is greater than `i64::MAX` seconds, we will
+    /// get an `Error::RangeError`.
+    pub fn now() -> Result<Self, Error> {
+        let now = std::time::SystemTime::now();
+        TryFrom::try_from(now)
+    }
+
     /// Create from a Julian Day (low precision)
     ///
     /// This is not as precise as `from_julian_day_parts`(), and much less precise than

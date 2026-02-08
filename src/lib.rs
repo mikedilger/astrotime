@@ -24,7 +24,7 @@ mod calendar;
 pub use calendar::{Calendar, Gregorian, Julian};
 
 mod standard;
-pub use standard::{Standard, Tai, Tt, Utc};
+pub use standard::{Standard, Tai, Tcg, Tt, Utc};
 
 mod leaps;
 pub use leaps::{leap_instants, leap_seconds_elapsed_at};

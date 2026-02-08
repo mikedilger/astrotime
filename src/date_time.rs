@@ -10,10 +10,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::calendar::{Calendar, Gregorian, Julian};
 use crate::duration::Duration;
+use crate::epoch::Epoch;
 use crate::error::Error;
 use crate::instant::Instant;
-use crate::standard::{Standard, Tai, Tt, Utc};
-use crate::{ATTOS_PER_SEC_I64, ATTOS_PER_SEC_U64};
+use crate::standard::{Standard, Tai, Tcg, Tt, Utc};
+use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64, ATTOS_PER_SEC_U64};
 
 /// A calendar date and time, with attosecond precision, representing the
 /// time elapsed since the start of the Common Era in a traditional way
@@ -364,8 +365,13 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// Create a `DateTime` from a `Duration` from the calendar epoch
     /// (with the calendar epoch represented in time `Standard` `S`, such
     /// that no time Standard conversions are done here).
+    ///
+    /// When using TCG, there is precision loss since we use double
+    /// precision floating point arithmetic, which is less precise than
+    /// the integers used in `Duration`).
     #[must_use]
     #[allow(clippy::missing_panics_doc)] // literal value won't
+    #[allow(clippy::cast_precision_loss)]
     pub fn from_duration_from_epoch(duration: Duration) -> Self {
         // We will construct a calendar-applicable Duration,
         // only for computing the calendar date, NOT for actual instant
@@ -390,6 +396,16 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
 
         // (Maybe) change time standards
         cal_duration -= S::tt_offset();
+
+        if let Some(scale) = S::tt_scale() {
+            let dur_since_sync = {
+                let instant = C::epoch() + duration;
+                let dss = instant - Epoch::TimeStandard.as_instant();
+                dss.secs as f64 + dss.attos as f64 / ATTOS_PER_SEC_F64
+            };
+            let shift = dur_since_sync * scale;
+            cal_duration += Duration::from_seconds(shift);
+        }
 
         if inside_a_leap {
             cal_duration -= Duration::new(1, 0);
@@ -691,10 +707,15 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
 
     /// Duration from the calendar epoch.
     ///
+    /// When using TCG, there is precision loss since we use double
+    /// precision floating point arithmetic, which is less precise than
+    /// the integers used in `Duration`).
+    ///
     /// # Panics
     ///
-    /// Only panics if we have an internal data consistency issue
+    /// Shouldn't panic unless this library has a bug.
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn duration_from_epoch(&self) -> Duration {
         let naive = {
             let dn = self.day_number();
@@ -707,6 +728,16 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
 
         // Shift time standards into Tt because calendar epochs are in Tt
         let mut d = naive + S::tt_offset();
+
+        if let Some(scale) = S::tt_scale() {
+            let dur_since_sync = {
+                let instant = C::epoch() + d;
+                let dss = instant - Epoch::TimeStandard.as_instant();
+                dss.secs as f64 + dss.attos as f64 / ATTOS_PER_SEC_F64
+            };
+            let shift = dur_since_sync * scale;
+            d -= Duration::from_seconds(shift);
+        }
 
         // Leap second adjustment
         if S::abbrev() == "UTC" {
@@ -882,13 +913,6 @@ impl<C: Calendar> From<DateTime<C, Tt>> for DateTime<C, Tai> {
         i.into()
     }
 }
-impl<C: Calendar> From<DateTime<C, Tai>> for DateTime<C, Tt> {
-    fn from(s1: DateTime<C, Tai>) -> Self {
-        // Convert through Instant
-        let i: Instant = s1.into();
-        i.into()
-    }
-}
 impl<C: Calendar> From<DateTime<C, Tt>> for DateTime<C, Utc> {
     fn from(s1: DateTime<C, Tt>) -> Self {
         // Convert through Instant
@@ -896,6 +920,36 @@ impl<C: Calendar> From<DateTime<C, Tt>> for DateTime<C, Utc> {
         i.into()
     }
 }
+impl<C: Calendar> From<DateTime<C, Tt>> for DateTime<C, Tcg> {
+    fn from(s1: DateTime<C, Tt>) -> Self {
+        // Convert through Instant
+        let i: Instant = s1.into();
+        i.into()
+    }
+}
+
+impl<C: Calendar> From<DateTime<C, Tai>> for DateTime<C, Tt> {
+    fn from(s1: DateTime<C, Tai>) -> Self {
+        // Convert through Instant
+        let i: Instant = s1.into();
+        i.into()
+    }
+}
+impl<C: Calendar> From<DateTime<C, Tai>> for DateTime<C, Utc> {
+    fn from(s1: DateTime<C, Tai>) -> Self {
+        // Convert through Instant
+        let i: Instant = s1.into();
+        i.into()
+    }
+}
+impl<C: Calendar> From<DateTime<C, Tai>> for DateTime<C, Tcg> {
+    fn from(s1: DateTime<C, Tai>) -> Self {
+        // Convert through Instant
+        let i: Instant = s1.into();
+        i.into()
+    }
+}
+
 impl<C: Calendar> From<DateTime<C, Utc>> for DateTime<C, Tt> {
     fn from(s1: DateTime<C, Utc>) -> Self {
         // Convert through Instant
@@ -910,8 +964,30 @@ impl<C: Calendar> From<DateTime<C, Utc>> for DateTime<C, Tai> {
         i.into()
     }
 }
-impl<C: Calendar> From<DateTime<C, Tai>> for DateTime<C, Utc> {
-    fn from(s1: DateTime<C, Tai>) -> Self {
+impl<C: Calendar> From<DateTime<C, Utc>> for DateTime<C, Tcg> {
+    fn from(s1: DateTime<C, Utc>) -> Self {
+        // Convert through Instant
+        let i: Instant = s1.into();
+        i.into()
+    }
+}
+
+impl<C: Calendar> From<DateTime<C, Tcg>> for DateTime<C, Tt> {
+    fn from(s1: DateTime<C, Tcg>) -> Self {
+        // Convert through Instant
+        let i: Instant = s1.into();
+        i.into()
+    }
+}
+impl<C: Calendar> From<DateTime<C, Tcg>> for DateTime<C, Tai> {
+    fn from(s1: DateTime<C, Tcg>) -> Self {
+        // Convert through Instant
+        let i: Instant = s1.into();
+        i.into()
+    }
+}
+impl<C: Calendar> From<DateTime<C, Tcg>> for DateTime<C, Utc> {
+    fn from(s1: DateTime<C, Tcg>) -> Self {
         // Convert through Instant
         let i: Instant = s1.into();
         i.into()
@@ -922,7 +998,7 @@ impl<C: Calendar> From<DateTime<C, Tai>> for DateTime<C, Utc> {
 mod test {
     use super::DateTime;
     use crate::calendar::{Gregorian, Julian};
-    use crate::standard::{Tai, Tt, Utc};
+    use crate::standard::{Tai, Tcg, Tt, Utc};
     use crate::{ATTOS_PER_SEC_I64, ATTOS_PER_SEC_U64};
     use crate::{Duration, Epoch, Instant};
 
@@ -1333,5 +1409,30 @@ mod test {
             let b: Instant = dt.into();
             assert_eq!(a, b);
         }
+    }
+
+    #[test]
+    fn test_tcg() {
+        // Because we have to use floating point, we
+        let d = DateTime::<Gregorian, Tt>::new(2020, 1, 1, 0, 0, 0, 0).unwrap();
+        let d2: DateTime<Gregorian, Tcg> = d.into();
+        let d3: DateTime<Gregorian, Tt> = d2.into();
+        let diff = d3 - d;
+        assert_eq!(diff.secs, 0);
+        assert!(diff.attos.abs() < 1_000_000_000_000);
+
+        let d = DateTime::<Gregorian, Tai>::new(2020, 1, 1, 0, 0, 0, 0).unwrap();
+        let d2: DateTime<Gregorian, Tcg> = d.into();
+        let d3: DateTime<Gregorian, Tai> = d2.into();
+        let diff = d3 - d;
+        assert_eq!(diff.secs, 0);
+        assert!(diff.attos.abs() < 1_000_000_000_000);
+
+        let d = DateTime::<Gregorian, Utc>::new(2020, 1, 1, 0, 0, 0, 0).unwrap();
+        let d2: DateTime<Gregorian, Tcg> = d.into();
+        let d3: DateTime<Gregorian, Utc> = d2.into();
+        let diff = d3 - d;
+        assert_eq!(diff.secs, 0);
+        assert!(diff.attos.abs() < 1_000_000_000_000);
     }
 }

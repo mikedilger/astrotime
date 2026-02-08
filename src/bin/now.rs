@@ -1,4 +1,4 @@
-use astrotime::{DateTime, Gregorian, Instant, Tai, Tt, Utc};
+use astrotime::{DateTime, Gregorian, Instant, Tai, Tcg, Tt, Utc};
 
 fn main() {
     let now = std::time::SystemTime::now();
@@ -9,4 +9,6 @@ fn main() {
     println!("{}", now_gregorian_tai);
     let now_gregorian_tt: DateTime<Gregorian, Tt> = From::from(now);
     println!("{}", now_gregorian_tt);
+    let now_gregorian_tcg: DateTime<Gregorian, Tcg> = From::from(now);
+    println!("{}", now_gregorian_tcg);
 }

@@ -1,41 +1,47 @@
 # astrotime
 
 Astrotime is a rust library for dealing with time for scientific and
-astronomical purposes on the surface of the Earth. It is not sufficient
-for satellites or space travellers (but PRs are welcome).
+astronomical purposes on the surface of the Earth, or for satellites
+of the Earth. It is not sufficient for space travel or for solar system
+objects.
 
 This library is lightweight and high performance.
-
 
 ## Features
 
 The following features are currently available:
 
-* Handles times covering the entire duration of the universe.
-* Handles times to attosecond precision.
-* Calendar representations of time (day, month, year, hour, minute, second)
-  including the well known month length and leap year oddities.
-* Using and converting between calendar standards: Gregorian, Julian
-* Julian Day support
-* Converts between time standards (UTC, TT, TAI), including leap second
-  handling (WARNING: the leap second list is compiled in and will require
-  code updates to refresh it if more leap seconds are added).
-* Supplies precise instants for well known Epochs such as J1900.0, J2000.0,
-  TcbTcgEphemeris, the Unix epoch, Y2K, etc.
+* `Duration`s:
+    * Handles times covering the entire duration of the universe.
+    * Handles times to attosecond precision.
+* `Instant`s:
+    * Math operations with Durations
+    * `now()` functionality (via `std::time::SystemTime`)
+    * Julian Day support
+    * NTP Date support
+* `Epoch`s
+    * Supplies precise instants for well known Epochs such as J1900.0, J2000.0, the Unix epoch, Y2K, NTP dates, Spreadsheet date epoch, etc.
+* `Standard`s of time, and conversions between them
+    * UTC, TT, TAI, and TCG.
+    * Handling leap seconds precisely, including edge cases.
+    * Geocentric coordinate time with Einsteinian correction for gravity.
+* `DateTime` calendar representations of time
+    * Day, month, year, hour, minute, second
+    * Handles the well known month length and leap year oddities.
+    * Using and converting between calendar standards: Gregorian, Julian
+* Conversion between `Instant`s and `DateTime`s.
 * Optional serde serialization (enable feature 'serde')
-
 
 ### Currently Excluded
 
-We do not deal with these civil time issues:
+We do not currently deal with these civil time issues:
 
 * Timezones
 * Daylight savings time
 * AM/PM
 
-UTC is the closest we get to civil time, and we do so primarily because
-Internet time standards are based on it, not because it is good.
-
+UTC is the closest we get to civil time, primarily because Internet time
+standards are based on it.
 
 ### Possible Improvements
 
@@ -52,7 +58,6 @@ that implement any of these:
 * Add GPS time and LORAN-C
 * Add Sidereal time
 * impl ApproxEq from the float_cmp trait for Duration, Instant, and DateTime
-
 
 ## Types
 

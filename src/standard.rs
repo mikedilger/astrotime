@@ -16,9 +16,12 @@ pub trait Standard: Debug + Sized + Clone {
     /// But if you wish to create a new Standard that implements this trait, you'll need
     /// access to this. This should not adjust for leap seconds.
     fn tt_offset() -> Duration;
+
+    /// Linear scale factor from TT, usually None
+    fn tt_scale() -> Option<f64>;
 }
 
-/// Terrestrial Time
+/// Terrestrial Time (TT)
 ///
 /// This is a continuous time standard for the surface of the Earth (Earth's geoid)
 /// See [Wikipedia](https://en.wikipedia.org/wiki/Terrestrial_Time)
@@ -36,9 +39,13 @@ impl Standard for Tt {
     fn tt_offset() -> Duration {
         Duration::new(0, 0)
     }
+
+    fn tt_scale() -> Option<f64> {
+        None
+    }
 }
 
-/// International Atomic Time
+/// International Atomic Time (TAI)
 ///
 /// This is a continuous time standard for the surface of the Earth (Earth's geoid)
 /// realized via atomic clocks.
@@ -56,9 +63,13 @@ impl Standard for Tai {
     fn tt_offset() -> Duration {
         Duration::new(32, 184_000_000_000_000_000)
     }
+
+    fn tt_scale() -> Option<f64> {
+        None
+    }
 }
 
-/// Universal Coordinated Time
+/// Universal Coordinated Time (UTC)
 ///
 /// This is civil time as usually reported.  It is discontinuous, having leap
 /// seconds inserted from time to time based on the Earth's rotation.
@@ -81,5 +92,37 @@ impl Standard for Utc {
 
     fn tt_offset() -> Duration {
         Duration::new(41, 184_000_000_000_000_000)
+    }
+
+    fn tt_scale() -> Option<f64> {
+        None
+    }
+}
+
+/// Geocentric Coordinate Time (TCG)
+///
+/// This is an Einsteinian-corrected time standard used for satellites
+/// of the Earth, which is also used to compute precession and nutation.
+/// It applies to objects taht move along with the Earth, but are outside
+/// of the Earth's gravity well.
+///
+/// TCG was synchronized with 1977-01-01T00:00:32.184 TT
+///
+/// Even though TCG was not defined until 1991, we use the standard
+/// prolepticly in the past.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct Tcg;
+impl Standard for Tcg {
+    fn abbrev() -> &'static str {
+        "TCG"
+    }
+
+    fn tt_offset() -> Duration {
+        Duration::new(0, 0)
+    }
+
+    fn tt_scale() -> Option<f64> {
+        Some(6.969_290_134e-10)
     }
 }
