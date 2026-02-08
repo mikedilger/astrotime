@@ -1,6 +1,32 @@
 //! astrotime
 //!
-//! Time related types for scientific and astronomical usage.
+//! Astrotime is a rust library for dealing with time for scientific and
+//! astronomical purposes on the surface of the Earth, or for satellites
+//! of the Earth. It is not sufficient for space travel or for solar system
+//! objects.
+//!
+//! Here is an example of getting the current time:
+//!
+//! ```rust
+//! # use astrotime::*;
+//! let now = std::time::SystemTime::now();
+//! let now: Instant = TryFrom::try_from(now).unwrap();
+//! let date: DateTime<Gregorian, Utc> = now.into();
+//! println!("{}", date);
+//! ```
+//!
+//! How many seconds have elasped since the UNIX epoch, until New Years
+//! 2026?  This will yield `1767225628` seconds.  Unixtime for that moment
+//! was `1767225600` because it ignores the leap seconds that also passed.
+//!
+//! ```rust
+//! # use astrotime::*;
+//! let now: DateTime<Gregorian, Utc> = DateTime::new(2026, 1, 1, 0, 0, 0, 0).unwrap();
+//! let n: Instant = now.into();
+//! let d: Duration = n - Epoch::Unix.as_instant();
+//! println!("{} seconds", d.seconds_part());
+//! ```
+
 
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 
