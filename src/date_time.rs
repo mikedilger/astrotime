@@ -11,7 +11,8 @@ use serde::{Deserialize, Serialize};
 use crate::calendar::{Calendar, Gregorian, Julian};
 use crate::duration::Duration;
 use crate::error::Error;
-use crate::standard::Standard;
+use crate::instant::Instant;
+use crate::standard::{Standard, Tai, Tt, Utc};
 use crate::{ATTOS_PER_SEC_I64, ATTOS_PER_SEC_U64};
 
 /// A calendar date and time, with attosecond precision, representing the
@@ -194,13 +195,18 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
         Self::new(year, month, day, hour, minute, second, attosecond)
     }
 
-    /// Create a new `DateTime` from the given parts.
+    /// Create a new `DateTime` from the given parts that may be out of range.
     ///
     /// Values that are out of normal ranges are allowed, including values that are negative.
     /// This function will adjust the input your provide into a normal form.
     ///
     /// The types we are working with are large i64 types, but they can still overflow.
     /// Overflow is not detected or reported (FIXME).
+    ///
+    /// # Warning
+    ///
+    /// This does not make any leap second adjustments under Utc. We presume that after
+    /// rolling up the numbers, that is the right calendar date.
     ///
     /// # Panics
     ///
@@ -359,8 +365,44 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// (with the calendar epoch represented in time `Standard` `S`, such
     /// that no time Standard conversions are done here).
     #[must_use]
+    #[allow(clippy::missing_panics_doc)] // literal value won't
     pub fn from_duration_from_epoch(duration: Duration) -> Self {
-        Self::new_abnormal(1, 1, 1, 0, 0, duration.secs, duration.attos)
+        // We will construct a calendar-applicable Duration,
+        // only for computing the calendar date, NOT for actual instant
+        // usage (as it would be wrong).
+        let mut cal_duration: Duration = duration;
+
+        let mut inside_a_leap: bool = false;
+
+        // Leap second adjustment
+        if S::abbrev() == "UTC" {
+            let instant = C::epoch() + duration;
+
+            let leaps = crate::leaps::leap_seconds_elapsed_at(instant);
+
+            // Check if inside a leap second
+            inside_a_leap =
+                crate::leaps::leap_seconds_elapsed_at(instant + Duration::new(1, 0)) > leaps;
+
+            // Remove the leap seconds:
+            cal_duration -= Duration::new(leaps, 0);
+        }
+
+        // (Maybe) change time standards
+        cal_duration -= S::tt_offset();
+
+        if inside_a_leap {
+            cal_duration -= Duration::new(1, 0);
+        }
+
+        let mut output = Self::new_abnormal(1, 1, 1, 0, 0, cal_duration.secs, cal_duration.attos);
+
+        if inside_a_leap {
+            assert_eq!(output.second(), 59); // because we removed 1 second just above
+            output.set_second(60).unwrap();
+        }
+
+        output
     }
 
     /// The year part
@@ -445,6 +487,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// The day of the week from 1 (Monday) .. 7 (Sunday) (ISO 8601)
     #[must_use]
     #[inline]
+    #[allow(clippy::cast_possible_truncation)] // Bound by 0-7, it won't
     pub fn weekday(&self) -> u8 {
         let offset = if C::is_gregorian() { 0 } else { 5 };
         (self.day_number() + offset).rem_euclid(7) as u8 + 1
@@ -646,22 +689,35 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
             / 8_640_000_000_000_000_000.
     }
 
-    /// Duration from the calendar epoch (with the calendar epoch represented
-    /// in the time `Standard` `S`, such that no time Standard conversions are
-    /// done here).
+    /// Duration from the calendar epoch.
     ///
     /// # Panics
     ///
     /// Only panics if we have an internal data consistency issue
     #[must_use]
     pub fn duration_from_epoch(&self) -> Duration {
-        let dn = self.day_number();
-        let seconds = dn * 86400
-            + i64::from(self.hour()) * 3600
-            + i64::from(self.minute()) * 60
-            + i64::from(self.second());
+        let naive = {
+            let dn = self.day_number();
+            let seconds = dn * 86400
+                + i64::from(self.hour()) * 3600
+                + i64::from(self.minute()) * 60
+                + i64::from(self.second());
+            Duration::new(seconds, i64::try_from(self.attosecond()).unwrap())
+        };
 
-        Duration::new(seconds, i64::try_from(self.attosecond()).unwrap())
+        // Shift time standards into Tt because calendar epochs are in Tt
+        let mut d = naive + S::tt_offset();
+
+        // Leap second adjustment
+        if S::abbrev() == "UTC" {
+            let close: Instant = C::epoch() + d;
+            let approx_leaps = crate::leaps::leap_seconds_elapsed_at(close);
+            let actual_leaps =
+                crate::leaps::leap_seconds_elapsed_at(close + Duration::new(approx_leaps + 1, 0));
+            d += Duration::new(actual_leaps, 0);
+        }
+
+        d
     }
 }
 
@@ -816,18 +872,62 @@ impl<S: Standard> TryFrom<DateTime<Julian, S>> for DateTime<Gregorian, S> {
     }
 }
 
+// For converting calendars between time standards, we cannot
+// use generics because we cannot specify that the two standards
+// are not equal. So we specify all pairwise combinations:
+impl<C: Calendar> From<DateTime<C, Tt>> for DateTime<C, Tai> {
+    fn from(s1: DateTime<C, Tt>) -> Self {
+        // Convert through Instant
+        let i: Instant = s1.into();
+        i.into()
+    }
+}
+impl<C: Calendar> From<DateTime<C, Tai>> for DateTime<C, Tt> {
+    fn from(s1: DateTime<C, Tai>) -> Self {
+        // Convert through Instant
+        let i: Instant = s1.into();
+        i.into()
+    }
+}
+impl<C: Calendar> From<DateTime<C, Tt>> for DateTime<C, Utc> {
+    fn from(s1: DateTime<C, Tt>) -> Self {
+        // Convert through Instant
+        let i: Instant = s1.into();
+        i.into()
+    }
+}
+impl<C: Calendar> From<DateTime<C, Utc>> for DateTime<C, Tt> {
+    fn from(s1: DateTime<C, Utc>) -> Self {
+        // Convert through Instant
+        let i: Instant = s1.into();
+        i.into()
+    }
+}
+impl<C: Calendar> From<DateTime<C, Utc>> for DateTime<C, Tai> {
+    fn from(s1: DateTime<C, Utc>) -> Self {
+        // Convert through Instant
+        let i: Instant = s1.into();
+        i.into()
+    }
+}
+impl<C: Calendar> From<DateTime<C, Tai>> for DateTime<C, Utc> {
+    fn from(s1: DateTime<C, Tai>) -> Self {
+        // Convert through Instant
+        let i: Instant = s1.into();
+        i.into()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::DateTime;
     use crate::calendar::{Gregorian, Julian};
-    use crate::duration::Duration;
-    use crate::standard::Tt;
+    use crate::standard::{Tai, Tt, Utc};
     use crate::{ATTOS_PER_SEC_I64, ATTOS_PER_SEC_U64};
+    use crate::{Duration, Epoch, Instant};
 
     #[test]
     fn test_range_errors() {
-        crate::setup_logging();
-
         assert!(DateTime::<Gregorian, Tt>::new(2000, 0, 31, 0, 0, 0, 0).is_err());
         assert!(DateTime::<Gregorian, Tt>::new(2000, 13, 31, 0, 0, 0, 0).is_err());
         assert!(DateTime::<Gregorian, Tt>::new(2000, 6, 0, 0, 0, 0, 0).is_err());
@@ -854,8 +954,6 @@ mod test {
 
     #[test]
     fn test_normalize() {
-        crate::setup_logging();
-
         // This is right out of leap second file for 1 Jan 1972
         let dt = DateTime::<Gregorian, Tt>::new_abnormal(1900, 1, 1, 0, 0, 2272060800, 0);
         assert_eq!(dt.year(), 1972);
@@ -925,8 +1023,6 @@ mod test {
 
     #[test]
     fn test_day_number() {
-        crate::setup_logging();
-
         let dt = DateTime::<Gregorian, Tt>::new(1, 1, 1, 0, 0, 0, 0).unwrap(); // year 1
         assert_eq!(dt.day_number(), 0);
 
@@ -944,8 +1040,6 @@ mod test {
 
     #[test]
     fn test_day_fraction() {
-        crate::setup_logging();
-
         use float_cmp::ApproxEq;
         let g1 = DateTime::<Gregorian, Tt>::new(2000, 1, 1, 12, 0, 0, 0).unwrap();
         assert!(g1.day_fraction().approx_eq(0.5, (0.0, 1)));
@@ -966,8 +1060,6 @@ mod test {
 
     #[test]
     fn test_extractors() {
-        crate::setup_logging();
-
         let g = DateTime::<Gregorian, Tt>::new(1965, 3, 7, 14, 29, 42, 500_000_000_000_000_000)
             .unwrap();
         assert_eq!(g.year(), 1965);
@@ -983,8 +1075,6 @@ mod test {
 
     #[test]
     fn test_setters() {
-        crate::setup_logging();
-
         let mut g = DateTime::<Gregorian, Tt>::new(1965, 3, 7, 14, 29, 42, 500_000_000_000_000_000)
             .unwrap();
 
@@ -1025,8 +1115,6 @@ mod test {
 
     #[test]
     fn test_comparison() {
-        crate::setup_logging();
-
         let g = DateTime::<Gregorian, Tt>::new(1965, 3, 7, 14, 29, 42, 500_000_000_000_000_000)
             .unwrap();
         let h = DateTime::<Gregorian, Tt>::new(1966, 1, 17, 3, 55, 51, 123_456_789_012_345_678)
@@ -1042,8 +1130,6 @@ mod test {
 
     #[test]
     fn test_math() {
-        crate::setup_logging();
-
         let g = DateTime::<Gregorian, Tt>::new(1996, 3, 2, 0, 0, 0, 50).unwrap();
         let week_less_150ns = Duration::new(86400 * 7, 150);
         let earlier = g - week_less_150ns;
@@ -1067,10 +1153,8 @@ mod test {
 
     #[test]
     fn test_print_extremes() {
-        crate::setup_logging();
-
         let min = DateTime::<Gregorian, Tt>::new(std::i32::MIN, 1, 1, 0, 0, 0, 0).unwrap();
-        info!("Min gregorian: {}", min);
+        println!("Min gregorian: {}", min);
         let max = DateTime::<Gregorian, Tt>::new(
             std::i32::MAX,
             12,
@@ -1081,13 +1165,11 @@ mod test {
             999_999_999_999_999_999,
         )
         .unwrap();
-        info!("Max gregorian: {}", max);
+        println!("Max gregorian: {}", max);
     }
 
     #[test]
     fn test_bc_day_numbers() {
-        crate::setup_logging();
-
         let mar1 = DateTime::<Gregorian, Tt>::new(0, 3, 1, 0, 0, 0, 0).unwrap();
         let feb29 = DateTime::<Gregorian, Tt>::new(0, 2, 29, 0, 0, 0, 0).unwrap();
         let feb28 = DateTime::<Gregorian, Tt>::new(0, 2, 28, 0, 0, 0, 0).unwrap();
@@ -1105,8 +1187,6 @@ mod test {
 
     #[test]
     fn test_convert_calendar() {
-        crate::setup_logging();
-
         let j = DateTime::<Julian, Tt>::new(1582, 10, 5, 0, 0, 0, 0).unwrap();
         let g = DateTime::<Gregorian, Tt>::new(1582, 10, 15, 0, 0, 0, 0).unwrap();
         let j2: DateTime<Julian, Tt> = TryFrom::try_from(g).unwrap();
@@ -1145,8 +1225,6 @@ mod test {
 
     #[test]
     fn test_epoch_duration() {
-        crate::setup_logging();
-
         let g = DateTime::<Gregorian, Tt>::new(1582, 10, 14, 0, 0, 0, 0).unwrap();
         let h = DateTime::<Gregorian, Tt>::from_duration_from_epoch(g.duration_from_epoch());
         assert_eq!(g, h);
@@ -1162,5 +1240,98 @@ mod test {
         assert_eq!(g.weekday(), 7);
         let j = DateTime::<Julian, Tt>::new(2026, 1, 19, 12, 0, 0, 0).unwrap();
         assert_eq!(j.weekday(), 7);
+    }
+
+    #[test]
+    fn test_datetime_instant_conversions_in_tt() {
+        let p1: Instant = Epoch::J1991_25.as_instant();
+        let d: DateTime<Gregorian, Tt> = p1.into();
+        let p2: Instant = d.into();
+        assert_eq!(p1, p2);
+
+        let d1 = DateTime::<Gregorian, Tt>::new(1993, 6, 30, 0, 0, 27, 0).unwrap();
+        let p: Instant = d1.into();
+        let d2: DateTime<Gregorian, Tt> = p.into();
+        assert_eq!(d1, d2);
+    }
+
+    #[test]
+    fn test_datetime_instant_conversions_without_leapseconds() {
+        let p1: Instant = Epoch::J1991_25.as_instant();
+        let d: DateTime<Gregorian, Tai> = p1.into();
+        let p2: Instant = d.into();
+        assert_eq!(p1, p2);
+
+        let d1 = DateTime::<Gregorian, Tai>::new(1993, 6, 30, 0, 0, 27, 0).unwrap();
+        let p: Instant = d1.into();
+        let d2: DateTime<Gregorian, Tai> = p.into();
+        assert_eq!(d1, d2);
+    }
+
+    #[test]
+    fn test_datetime_instant_conversions_with_leapseconds() {
+        let leap_instant = Instant::from_ntp_date(2429913600, 0);
+        assert_eq!(leap_instant, Epoch::Y1977.as_instant()); // FAILLING, but why?
+        let date: DateTime<Gregorian, Utc> = leap_instant.into();
+        let expected_date = DateTime::<Gregorian, Utc>::new(1977, 1, 1, 0, 0, 0, 0).unwrap();
+        assert_eq!(date, expected_date);
+
+        let plus_three = leap_instant + Duration::new(3, 0);
+        let date: DateTime<Gregorian, Utc> = plus_three.into();
+        let expected_date = DateTime::<Gregorian, Utc>::new(1977, 1, 1, 0, 0, 3, 0).unwrap();
+        assert_eq!(date, expected_date);
+
+        let minus_three = leap_instant - Duration::new(3, 0);
+        let date: DateTime<Gregorian, Utc> = minus_three.into();
+        let expected_date = DateTime::<Gregorian, Utc>::new(1976, 12, 31, 23, 59, 58, 0).unwrap();
+        assert_eq!(date, expected_date);
+
+        let minus_half = leap_instant - Duration::new(0, ATTOS_PER_SEC_I64 / 2);
+        let date: DateTime<Gregorian, Utc> = minus_half.into();
+        let expected_date =
+            DateTime::<Gregorian, Utc>::new(1976, 12, 31, 23, 59, 60, ATTOS_PER_SEC_U64 / 2)
+                .unwrap();
+        assert_eq!(date, expected_date);
+    }
+
+    #[test]
+    fn test_time_standard_conversions() {
+        let p: Instant =
+            From::from(DateTime::<Gregorian, Tai>::new(1993, 6, 30, 0, 0, 27, 0).unwrap());
+        let q: DateTime<Gregorian, Utc> = From::from(p);
+        assert_eq!(
+            q,
+            DateTime::<Gregorian, Utc>::new(1993, 6, 30, 0, 0, 0, 0).unwrap()
+        );
+
+        let p: Instant = Epoch::Unix.as_instant();
+        let q: DateTime<Gregorian, Utc> = From::from(p);
+        assert_eq!(
+            q,
+            DateTime::<Gregorian, Utc>::new(1970, 1, 1, 0, 0, 0, 0).unwrap()
+        );
+
+        let y2k: Instant = Epoch::Y2k.as_instant();
+        let q: DateTime<Gregorian, Utc> = From::from(y2k);
+        assert_eq!(
+            q,
+            DateTime::<Gregorian, Utc>::new(2000, 1, 1, 0, 0, 0, 0).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_instant_datetime_utc_range() {
+        // Test UTC in the vacinity of a leap second (1 January 1999)
+        let leap_instant: Instant = From::from(
+            DateTime::<Gregorian, Tt>::new(1999, 1, 1, 0, 0, 0, 0).unwrap()
+                - Duration::new(32 + 32, 184_000_000_000_000_000),
+        );
+        for s in -100..100 {
+            println!("s={}", s);
+            let a = leap_instant + Duration::new(s, 0);
+            let dt: DateTime<Gregorian, Utc> = a.into();
+            let b: Instant = dt.into();
+            assert_eq!(a, b);
+        }
     }
 }

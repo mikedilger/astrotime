@@ -3,20 +3,15 @@ name = "astrotime"
 description = "Time related types"
 version = "0.1.1-unstable"
 authors = [ "Mike Dilger <mike@optcomp.nz>" ]
-edition = "2021"
+edition = "2024"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/mikedilger/astrotime"
 keywords = [ "time", "date" ]
 categories = [ "date-and-time" ]
 
-[features]
-default = []
-
 [dependencies]
-log = "0.4"
 serde = { version = "1.0", default-features = false, features = [ "derive" ], optional = true }
 
 [dev-dependencies]
-pretty_env_logger = "0.4"
 float-cmp = { version = "0.9", default-features = false, features = [ "std" ] }

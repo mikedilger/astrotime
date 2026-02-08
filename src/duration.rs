@@ -1,7 +1,7 @@
 use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64};
 use std::convert::TryFrom;
 use std::fmt;
-use std::ops::{Add, Mul, Neg, Sub};
+use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -46,6 +46,16 @@ impl Duration {
         let mut d = Self { secs, attos };
         d.normalize();
         d
+    }
+
+    /// Make a new `Duration` from seconds as `f64`.
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
+    pub const fn from_seconds(secs: f64) -> Self {
+        Self {
+            secs: secs.trunc() as i64,
+            attos: (secs.fract() * ATTOS_PER_SEC_F64) as i64,
+        }
     }
 
     /// The seconds part
@@ -150,6 +160,14 @@ impl Add for Duration {
     }
 }
 
+impl AddAssign<Self> for Duration {
+    fn add_assign(&mut self, rhs: Self) {
+        self.secs += rhs.secs;
+        self.attos += rhs.attos;
+        self.normalize();
+    }
+}
+
 impl Sub for Duration {
     type Output = Self;
 
@@ -160,6 +178,14 @@ impl Sub for Duration {
         };
         d.normalize();
         d
+    }
+}
+
+impl SubAssign<Self> for Duration {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.secs -= rhs.secs;
+        self.attos -= rhs.attos;
+        self.normalize();
     }
 }
 
@@ -206,8 +232,6 @@ mod test {
 
     #[test]
     fn test_duration_normalize() {
-        crate::setup_logging();
-
         let mut d = Duration {
             secs: 12,
             attos: -15,
@@ -227,8 +251,6 @@ mod test {
 
     #[test]
     fn test_add_duration() {
-        crate::setup_logging();
-
         let d1 = Duration {
             secs: 8000,
             attos: 12000,
@@ -253,8 +275,6 @@ mod test {
 
     #[test]
     fn test_sub_duration_vs_neg() {
-        crate::setup_logging();
-
         let d1 = Duration {
             secs: 8000,
             attos: 12000,
@@ -272,8 +292,6 @@ mod test {
 
     #[test]
     fn test_duration_display() {
-        crate::setup_logging();
-
         let d = Duration {
             secs: 86400 * 100,
             attos: 12000,
@@ -303,5 +321,22 @@ mod test {
         assert_eq!(&*format!("{}", d), "PT0.000000000000000031S");
         let d = Duration { secs: 0, attos: 0 };
         assert_eq!(&*format!("{}", d), "P");
+    }
+
+    #[test]
+    fn test_add_assign() {
+        let d1 = Duration {
+            secs: 8_640_000,
+            attos: 12000,
+        };
+        let d2 = Duration {
+            secs: -16500,
+            attos: -999_999_999_999_997_000,
+        };
+
+        let mut x = d1;
+        x += d2;
+        assert_eq!(x.secs, 8_623_499);
+        assert_eq!(x.attos, 15_000);
     }
 }

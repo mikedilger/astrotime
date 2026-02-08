@@ -241,8 +241,6 @@ mod test {
 
     #[test]
     fn test_gregorian_julian_date_matches() {
-        crate::setup_logging();
-
         // JULIAN: October 5, 1582     (JD 2299161)
         // GREGORIAN: October 15, 1582 (JD 2299161)
         let dnj = Julian::day_number(1582, 10, 5).unwrap();
@@ -269,8 +267,6 @@ mod test {
 
     #[test]
     fn test_calendar_gregorian_day_numbers() {
-        crate::setup_logging();
-
         // Epoch (year 1)
         let dn = Gregorian::day_number(1, 1, 1).unwrap();
         assert_eq!(dn, 0);
@@ -370,8 +366,6 @@ mod test {
 
     #[test]
     fn test_calendar_julian_day_numbers() {
-        crate::setup_logging();
-
         // Epoch (year 1)
         let dn = Julian::day_number(1, 1, 1).unwrap();
         assert_eq!(dn, 0);

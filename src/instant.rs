@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-use std::ops::{Add, Sub};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -12,18 +12,19 @@ use crate::error::Error;
 use crate::standard::Standard;
 use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64};
 
-/// An `Instant` is a precise moment in time according to a particular time `Standard`.
+/// An `Instant` is a precise moment in time.
 ///
 /// Internally this is stored as a Duration (which is 128 bits in size) offset from
-/// an internally chosen epoch.
+/// an opaque internally chosen epoch.
 ///
-/// This represents the same thing that a `DateTime` does, but it makes it easier to work
-/// with Durations, avoids the complexity of the `Calendar`, and spans a much larger time
-/// span, able to handle times from about 20 times as old as the age of the
-/// universe backwards, and the same distance forwards, with attosecond (10^-18) precision.
+/// This represents the same thing that a `DateTime` does, but has advantages:
+/// * It is easier to work with Durations by avoiding the complexity of the `Calendar`
+/// * Spans a much larger time span, able to handle times from about 20 times as old
+///   as the age of the/ universe backwards, and the same distance forwards
+/// * Provides attosecond (10^-18) precision.
 //
 // Internally, Instants are Duration offsets from `Epoch::TimeStandard`, which is
-// January 1st, 1977 CE gregorian, 00:00:32.184 Tt
+// January 1st, 1977 CE Gregorian, 00:00:00.000 TAI
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Instant(pub(crate) Duration);
@@ -122,6 +123,29 @@ impl Instant {
         let fraction = format!("{frac}").trim_start_matches(['-', '0']).to_owned();
         format!("JD {day}{fraction}")
     }
+
+    /// As an NTP date, which is seconds and attoseconds.
+    ///
+    /// This value is not returned as a Duration because NTP dates are
+    /// incorrect durations from the NTP epoch (in that they don't include
+    /// leap seconds).
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)]
+    pub fn as_ntp_date(&self) -> (i64, i64) {
+        let ntp_dur = *self - Epoch::Ntp.as_instant();
+        let leaps = crate::leaps::leap_seconds_elapsed_at(*self);
+        (ntp_dur.secs - leaps, ntp_dur.attos)
+    }
+
+    /// From an NTP date
+    #[must_use]
+    pub fn from_ntp_date(ntp_secs: i64, ntp_attos: i64) -> Self {
+        let close = Epoch::Ntp.as_instant() + Duration::new(ntp_secs, ntp_attos);
+        let approx_leaps = crate::leaps::leap_seconds_elapsed_at(close);
+        let actual_leaps =
+            crate::leaps::leap_seconds_elapsed_at(close + Duration::new(approx_leaps + 1, 0));
+        close + Duration::new(actual_leaps, 0)
+    }
 }
 
 impl Add<Duration> for Instant {
@@ -132,11 +156,23 @@ impl Add<Duration> for Instant {
     }
 }
 
+impl AddAssign<Duration> for Instant {
+    fn add_assign(&mut self, rhs: Duration) {
+        self.0 += rhs;
+    }
+}
+
 impl Sub<Duration> for Instant {
     type Output = Self;
 
     fn sub(self, rhs: Duration) -> Self {
         Self(self.0.sub(rhs))
+    }
+}
+
+impl SubAssign<Duration> for Instant {
+    fn sub_assign(&mut self, rhs: Duration) {
+        self.0 -= rhs;
     }
 }
 
@@ -150,25 +186,13 @@ impl Sub<Self> for Instant {
 
 impl<C: Calendar, S: Standard> From<Instant> for DateTime<C, S> {
     fn from(i: Instant) -> Self {
-        // Conversion between time standards
-        let dur: Duration = S::from_tt(i.0);
-
-        // NOTE: if we ever move the epoch that Durations are based on
-        //       away from TimeStandard, then replace `C::epoch()` below
-        //       with `C::epoch() - Epoch::TimeStandard.as_instant()`
-        Self::from_duration_from_epoch(dur - C::epoch().0)
+        Self::from_duration_from_epoch(i - C::epoch())
     }
 }
 
 impl<C: Calendar, S: Standard> From<DateTime<C, S>> for Instant {
     fn from(dt: DateTime<C, S>) -> Self {
-        // NOTE: if we ever move the epoch that Durations are based on
-        //       away from TimeStandard, then replace `C::epoch()` below
-        //       with `C::epoch() - Epoch::TimeStandard.as_instant()`
-        let dur: Duration = dt.duration_from_epoch() + C::epoch().0;
-
-        // Conversion between time standards
-        Self(S::to_tt(dur))
+        C::epoch() + dt.duration_from_epoch()
     }
 }
 
@@ -181,7 +205,6 @@ impl TryFrom<std::time::SystemTime> for Instant {
         //       duration_since(UNIX_EPOCH), we get a number that is short
         //       by the total number of leap seconds that have occured.
         //       We correct for this below.
-
         let since_unix_epoch_less_leaps: Duration = match s.duration_since(std::time::UNIX_EPOCH) {
             Ok(std_dur) => TryFrom::try_from(std_dur)?,
             Err(std_time_error) => {
@@ -191,37 +214,49 @@ impl TryFrom<std::time::SystemTime> for Instant {
             }
         };
 
-        let time_less_leaps = Epoch::Unix.as_instant() + since_unix_epoch_less_leaps;
+        let mut instant = Epoch::Unix.as_instant() + since_unix_epoch_less_leaps;
 
-        // Add the missing leap seconds in two passes
-        let leap_seconds_elapsed_try1 = crate::standard::leap_seconds_elapsed(time_less_leaps);
-        let time_maybe_missing_one_leap =
-            time_less_leaps + Duration::new(leap_seconds_elapsed_try1, 0);
+        // Add the missing leap seconds
+        let leaps = crate::leap_seconds_elapsed_at(instant);
+        instant += Duration::new(leaps, 0);
 
-        // Check that we didn't hit another leap second in the process
-        let leap_seconds_elapsed_try2 =
-            crate::standard::leap_seconds_elapsed(time_maybe_missing_one_leap);
+        // That correction might have caused the instant to move past yet
+        // one more leap second.  If so we should add it.
+        let leaps2 = crate::leap_seconds_elapsed_at(instant);
+        instant += Duration::new(leaps2 - leaps, 0);
 
-        Ok(if leap_seconds_elapsed_try2 > leap_seconds_elapsed_try1 {
-            time_maybe_missing_one_leap + Duration::new(1, 0)
-        } else {
-            time_maybe_missing_one_leap
-        })
+        Ok(instant)
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::Instant;
+    use crate::ATTOS_PER_SEC_I64;
     use crate::calendar::Gregorian;
     use crate::date_time::DateTime;
+    use crate::duration::Duration;
     use crate::epoch::Epoch;
     use crate::standard::{Tai, Utc};
 
     #[test]
-    fn test_instant_julian_day_conversions() {
-        crate::setup_logging();
+    fn test_instant_ntp_conversions() {
+        let y1977 = Epoch::Y1977.as_instant();
+        let start = y1977 - Duration::new(3, ATTOS_PER_SEC_I64 / 2);
+        let end = y1977 - Duration::new(3, ATTOS_PER_SEC_I64 / 2);
 
+        let increment = Duration::new(0, ATTOS_PER_SEC_I64 / 2);
+        let mut instant = start;
+        while instant < end {
+            let (a, b) = instant.as_ntp_date();
+            let instant2 = Instant::from_ntp_date(a, b);
+            assert_eq!(instant, instant2);
+
+            instant += increment;
+        }
+    }
+    #[test]
+    fn test_instant_julian_day_conversions() {
         assert_eq!(
             Instant::from_julian_day_parts(1721425, 0.5),
             Epoch::GregorianCalendar.as_instant()
@@ -272,8 +307,6 @@ mod test {
 
     #[test]
     fn test_time_standard_conversions() {
-        crate::setup_logging();
-
         let p: Instant =
             From::from(DateTime::<Gregorian, Tai>::new(1993, 6, 30, 0, 0, 27, 0).unwrap());
         let q: DateTime<Gregorian, Utc> = From::from(p);

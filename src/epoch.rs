@@ -4,7 +4,8 @@ use crate::instant::Instant;
 /// A reference for a well known `Instant` in time, used for offsetting events from.
 pub enum Epoch {
     /// The start of the Julian Period,
-    /// which is 4713 BCE on Jan 1st Julian, 00:00:00.0 TT
+    /// which is 4713 BCE on Jan 1st Julian, 12:00:00.0 TT
+    /// which is 4714 BCE on Nov 24 Gregorian, 12:00:00.0 TT
     /// JD 0 (by definition)
     JulianPeriod,
 
@@ -23,9 +24,10 @@ pub enum Epoch {
     GregorianCalendar,
 
     /// The Spreadsheet Epoch
-    /// Which is December 30, 1899 CE gregorian, 00:00:00.0 TT
+    /// Which is December 30, 1899 CE gregorian, 00:00:00.0 UTC
     /// This is the point from which dates in a spreadsheet are counted
     /// as the (floating point) number of days since.
+    /// JD 2415018.500476666666  // 32.184 [TAI-TT] + 9 [UTC-TAI]
     Spreadsheet,
 
     /// The J1900.0 astronomical epoch,
@@ -35,23 +37,24 @@ pub enum Epoch {
 
     /// The NTP time base used in the IANA leap seconds file
     /// which is January 1st, 1900 CE gregorian, 00:00:00.0 UTC
-    /// JD 2415020.500476666666
+    /// (seconds elapsed since 1900-01-01 00:00:00 UTC, except the leap seconds themselves)
+    /// JD 2415020.500476666666  // 32.184 [TAI-TT] + 9 [UTC-TAI]
     Ntp,
 
-    // Our future `TimeStandard` zero point
-    // which is January 1st, 1970 CE gregorian, 00:00:00.0 TAI
-    // JD 2440587.5003725
-    //TimeStandard,
     /// The UNIX Epoch,
     /// which is January 1st, 1970 CE gregorian, 00:00:00.0 UTC
-    /// JD 2440587.500476666666
+    /// JD 2440587.500476666666  // 32.184 [TAI-TT] + 9 [UTC-TAI]
     Unix,
 
     /// The epoch where TT, TCB, and TCG all read the same.
     /// which is January 1st, 1977 CE gregorian, 00:00:00 TAI
     /// JD 2443144.5003725 (verified at <https://en.wikipedia.org/wiki/International_Atomic_Time>)
-    // to rename TcbTcgEphemeris when we switch time standards
+    /// This is 16 seconds different from this date in UTC, and another 32.184 [TAI-TT] from TT.
     TimeStandard,
+
+    /// A year I use for testing
+    /// 1977-1-1 00:00:00 UTC
+    Y1977,
 
     /// The J1991.25 astronomical epoch,
     /// which is April 2, 1991 CE gregorian, 13:30:00.0 TT
@@ -60,7 +63,7 @@ pub enum Epoch {
 
     /// The Year 2000
     /// which is January 1st, 2000 CE gregorian, 00:00:00.0 UTC
-    /// JD 2451544.5007428704
+    /// JD 2451544.50074287037 // 32.184 [TAI-TT] + 32 [UTC-TAI]
     Y2k,
 
     /// The J2000.0 astronomical epoch,
@@ -99,8 +102,8 @@ impl Epoch {
                 attos: -184_000_000_000_000_000,
             }),
             Self::Spreadsheet => Instant(Duration {
-                secs: -2_430_086_432,
-                attos: -184_000_000_000_000_000,
+                secs: -2_430_086_391,
+                attos: -0,
             }),
             Self::J1900_0 => Instant(Duration {
                 secs: -2_429_956_832,
@@ -112,9 +115,10 @@ impl Epoch {
             }),
             Self::Unix => Instant(Duration {
                 secs: -220_924_791,
-                attos: 0,
+                attos: -0,
             }),
             Self::TimeStandard => Instant(Duration { secs: 0, attos: 0 }),
+            Self::Y1977 => Instant(Duration { secs: 16, attos: 0 }),
             Self::J1991_25 => Instant(Duration {
                 secs: 449_674_167,
                 attos: 816_000_000_000_000_000,
@@ -159,8 +163,6 @@ mod test {
 
     #[test]
     fn check_epochs_and_conversion() {
-        crate::setup_logging();
-
         epoch_check!(
             Epoch::JulianPeriod,
             Julian,
@@ -182,8 +184,8 @@ mod test {
         epoch_check!(
             Epoch::Spreadsheet,
             Gregorian,
-            Tt,
-            DateTime::<Gregorian, Tt>::new(1899, 12, 30, 0, 0, 0, 0).unwrap()
+            Utc,
+            DateTime::<Gregorian, Utc>::new(1899, 12, 30, 0, 0, 0, 0).unwrap()
         );
         epoch_check!(
             Epoch::J1900_0,
@@ -198,23 +200,23 @@ mod test {
             DateTime::<Gregorian, Utc>::new(1900, 1, 1, 0, 0, 0, 0).unwrap()
         );
         epoch_check!(
-            Epoch::TimeStandard,
-            Gregorian,
-            Tt,
-            DateTime::<Gregorian, Tt>::new(1977, 1, 1, 0, 0, 32, 184_000_000_000_000_000).unwrap()
-        );
-        epoch_check!(
             Epoch::Unix,
             Gregorian,
             Utc,
             DateTime::<Gregorian, Utc>::new(1970, 1, 1, 0, 0, 0, 0).unwrap()
         );
-        //epoch_check!(
-        //    Epoch::TcbTcgEphemeris,
-        //    Gregorian,
-        //    Tai,
-        //    DateTime::<Gregorian, Tai>::new(1977, 1, 1, 0, 0, 0, 0).unwrap()
-        //);
+        epoch_check!(
+            Epoch::TimeStandard,
+            Gregorian,
+            Tai,
+            DateTime::<Gregorian, Tai>::new(1977, 1, 1, 0, 0, 0, 0).unwrap()
+        );
+        epoch_check!(
+            Epoch::Y1977,
+            Gregorian,
+            Utc,
+            DateTime::<Gregorian, Utc>::new(1977, 1, 1, 0, 0, 0, 0).unwrap()
+        );
         epoch_check!(
             Epoch::J1991_25,
             Gregorian,
@@ -249,8 +251,14 @@ mod test {
 
     #[test]
     fn test_instant_julian_day_formatted() {
-        crate::setup_logging();
-
+        assert_eq!(
+            Epoch::JulianPeriod.as_instant().as_julian_day_formatted(),
+            "JD 0"
+        );
+        assert_eq!(
+            Epoch::JulianCalendar.as_instant().as_julian_day_formatted(),
+            "JD 1721423.5"
+        );
         assert_eq!(
             Epoch::GregorianCalendar
                 .as_instant()
@@ -258,20 +266,32 @@ mod test {
             "JD 1721425.5"
         );
         assert_eq!(
-            Epoch::JulianCalendar.as_instant().as_julian_day_formatted(),
-            "JD 1721423.5"
-        );
-        assert_eq!(
-            Epoch::JulianPeriod.as_instant().as_julian_day_formatted(),
-            "JD 0"
+            Epoch::Spreadsheet.as_instant().as_julian_day_formatted(),
+            "JD 2415018.5004766666666667"
         );
         assert_eq!(
             Epoch::J1900_0.as_instant().as_julian_day_formatted(),
             "JD 2415020"
         );
         assert_eq!(
+            Epoch::Ntp.as_instant().as_julian_day_formatted(),
+            "JD 2415020.5004766666666667"
+        );
+        assert_eq!(
+            Epoch::Unix.as_instant().as_julian_day_formatted(),
+            "JD 2440587.5004766666666667"
+        );
+        assert_eq!(
+            Epoch::TimeStandard.as_instant().as_julian_day_formatted(),
+            "JD 2443144.5003725"
+        );
+        assert_eq!(
             Epoch::J1991_25.as_instant().as_julian_day_formatted(),
             "JD 2448349.0625"
+        );
+        assert_eq!(
+            Epoch::Y2k.as_instant().as_julian_day_formatted(),
+            "JD 2451544.5007428703703704"
         );
         assert_eq!(
             Epoch::J2000_0.as_instant().as_julian_day_formatted(),
@@ -284,20 +304,6 @@ mod test {
         assert_eq!(
             Epoch::J2200_0.as_instant().as_julian_day_formatted(),
             "JD 2524595"
-        );
-        // This is slightly off from TT midnight because of the TT/UTC conversion
-        assert_eq!(
-            Epoch::Unix.as_instant().as_julian_day_formatted(),
-            "JD 2440587.5004766666666667"
-        );
-        // This is slightly off from TT midnight because of the TT/UTC conversion
-        assert_eq!(
-            Epoch::Y2k.as_instant().as_julian_day_formatted(),
-            "JD 2451544.5007428703703704"
-        );
-        assert_eq!(
-            Epoch::TimeStandard.as_instant().as_julian_day_formatted(),
-            "JD 2443144.5003725"
         );
     }
 }

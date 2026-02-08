@@ -4,43 +4,33 @@
 
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 
-#[macro_use]
-extern crate log;
-
-mod calendar;
-pub use calendar::{Calendar, Gregorian, Julian};
-
-mod date_time;
-pub use date_time::DateTime;
-
-mod duration;
-pub use duration::Duration;
-
-mod epoch;
-pub use epoch::Epoch;
-
 mod error;
 pub use error::Error;
-
-mod instant;
-pub use instant::Instant;
-
-mod standard;
-pub use standard::{Continuous, Standard, Tai, Tt, Utc};
 
 pub const ATTOS_PER_SEC_I64: i64 = 1_000_000_000_000_000_000;
 pub const ATTOS_PER_SEC_U64: u64 = 1_000_000_000_000_000_000;
 pub const ATTOS_PER_SEC_F64: f64 = 1_000_000_000_000_000_000.;
 
-// When running tests, we setup the logger
-#[cfg(test)]
-static INIT: std::sync::Once = std::sync::Once::new();
-#[cfg(test)]
-fn setup_logging() {
-    INIT.call_once(|| {
-        pretty_env_logger::init();
-    });
-}
+mod duration;
+pub use duration::Duration;
+
+mod instant;
+pub use instant::Instant;
+
+mod epoch;
+pub use epoch::Epoch;
+
+mod calendar;
+pub use calendar::{Calendar, Gregorian, Julian};
+
+mod standard;
+pub use standard::{Standard, Tai, Tt, Utc};
+
+mod leaps;
+pub use leaps::{leap_instants, leap_seconds_elapsed_at};
+
+mod date_time;
+pub use date_time::DateTime;
 
 // Division and modulus
 macro_rules! define_divmod {
@@ -65,8 +55,6 @@ define_divmod!(i64, divmod_i64);
 
 #[test]
 fn test_divmod() {
-    crate::setup_logging();
-
     let (div, modulo) = divmod_i64(47, 10);
     assert_eq!(div, 4);
     assert_eq!(modulo, 7);
