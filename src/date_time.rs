@@ -530,20 +530,23 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// Set the year, leaving other fields unchanged
     #[inline]
     #[allow(clippy::cast_sign_loss)]
-    pub const fn set_year(&mut self, year: i32) {
+    pub fn set_year(&mut self, year: i32) -> Result<(), Error> {
+        if self.day() > C::month_days(self.month(), year) {
+            return Err(Error::RangeError);
+        }
+
         // "year as u64" treats the sign bit as a bit in the MSB, which is what we want,
         // because we must preserve negative years in our packing.
         pack(&mut self.packed, YEAR_BITS, YEAR_OFFSET, year as u64);
+        Ok(())
     }
 
     /// Set the year with a BC year, leaving other fields unchanged
     #[inline]
     #[allow(clippy::cast_sign_loss)]
-    pub const fn set_year_bc(&mut self, year_bc: i32) {
+    pub fn set_year_bc(&mut self, year_bc: i32) -> Result<(), Error> {
         let year = 1 - year_bc;
-        // "year as u64" treats the sign bit as a bit in the MSB, which is what we want,
-        // because we must preserve negative years in our packing.
-        pack(&mut self.packed, YEAR_BITS, YEAR_OFFSET, year as u64);
+        self.set_year(year)
     }
 
     /// Set the month, leaving other fields unchanged
@@ -621,8 +624,24 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// The second of '60' should only be used for leapsecond situations, but
     /// no error is thrown if used otherwise.
     pub fn set_second(&mut self, second: u8) -> Result<(), Error> {
-        if second > 60 {
-            return Err(Error::RangeError);
+        if second > 59 {
+            if second > 60 {
+                return Err(Error::RangeError);
+            }
+            // We check we are the last minute so that our '61' below doesn't
+            // accidentally take things from 59:59 up to 00:00, but is still
+            // enough to move past the entire leap minute
+            if self.minute() != 59 {
+                return Err(Error::RangeError);
+            }
+            let i: Instant = (*self).clone().into();
+            let mut j = i;
+            j = j + Duration::new(61, 0);
+            let at_i = crate::leaps::leap_seconds_elapsed_at(i);
+            let at_j = crate::leaps::leap_seconds_elapsed_at(j);
+            if at_i >= at_j {
+                return Err(Error::RangeError);
+            }
         }
         pack(
             &mut self.packed,
@@ -653,7 +672,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     ///
     /// Will return `Error::RangeError` if any input values are out of the proscribed range
     pub fn set_date(&mut self, date: (i32, u8, u8)) -> Result<(), Error> {
-        self.set_year(date.0);
+        self.set_year(date.0)?;
         self.set_month(date.1)?;
         self.set_day(date.2)?;
         Ok(())
