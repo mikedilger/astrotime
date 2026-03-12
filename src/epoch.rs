@@ -2,6 +2,7 @@ use crate::duration::Duration;
 use crate::instant::Instant;
 
 /// A reference for a well known `Instant` in time, used for offsetting events from.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Epoch {
     /// The start of the Julian Period,
     /// which is 4713 BCE on Jan 1st Julian, 12:00:00.0 TT

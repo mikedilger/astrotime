@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::duration::Duration;
 
 /// A standard of time
-pub trait Standard: Debug + Sized + Clone {
+pub trait Standard: Debug + Sized + Copy {
     /// Short capital-letter abbreviation for the time standard (usually 2 or 3 letters)
     fn abbrev() -> &'static str;
 
@@ -28,7 +28,7 @@ pub trait Standard: Debug + Sized + Clone {
 ///
 /// This type is proleptic. TT was defined in 1976, and changed in 2000 very slightly.
 /// All dates before this extrapolate backwards.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Tt;
 impl Standard for Tt {
@@ -52,7 +52,7 @@ impl Standard for Tt {
 ///
 /// This type is proleptic. TAI started on 1 January 1958, but we represent all dates
 /// before this as if TAI extends backwards.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Tai;
 impl Standard for Tai {
@@ -82,7 +82,7 @@ impl Standard for Tai {
 /// are hard to reconstruct or even get a list of).  For all dates prior to
 /// 1 January 1960, UTC didn't exist, but we pretend it did, offset 9 seconds
 /// from TAI.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Utc;
 impl Standard for Utc {
@@ -110,7 +110,7 @@ impl Standard for Utc {
 ///
 /// Even though TCG was not defined until 1991, we use the standard
 /// prolepticly in the past.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Tcg;
 impl Standard for Tcg {

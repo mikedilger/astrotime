@@ -25,7 +25,7 @@ use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64};
 //
 // Internally, Instants are Duration offsets from `Epoch::TimeStandard`, which is
 // January 1st, 1977 CE Gregorian, 00:00:00.000 TAI
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Instant(pub(crate) Duration);
 

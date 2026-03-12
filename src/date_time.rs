@@ -53,7 +53,7 @@ use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64, ATTOS_PER_SEC_U64};
 ///
 /// This represents the same thing that an `Instant` does, but it makes `Calendar` data
 /// easier to work with, and has such date precomputed and packed within.
-#[derive(Clone, Copy)] // is also Send
+#[derive(Copy, Clone)] // is also Send
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DateTime<C: Calendar, S: Standard> {
     packed: u64,

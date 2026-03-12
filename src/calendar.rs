@@ -5,6 +5,9 @@ use crate::instant::Instant;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+use std::fmt::Debug;
+
+
 /// This specifies traditional Calendar settings that use the traditional 12 months
 /// and have leap years. This is implemented for `Gregorian` and `Julian`. It does
 /// not handle more esoteric calendars.
@@ -13,7 +16,7 @@ use serde::{Deserialize, Serialize};
 /// year 0 is 1 B.C., and year -1 is 2 B.C., etc. In general:
 /// * _n_ B.C. is represented by year 1-_n_
 /// * Year _-y_ represents year _y_+1 B.C. (for positive y).
-pub trait Calendar {
+pub trait Calendar: Debug + Copy {
     /// If the calendar is Gregorian (since we only handle Julian and Gregorian, this
     /// is all that needs to be defined to differentiate them)
     fn is_gregorian() -> bool;
@@ -215,7 +218,7 @@ pub trait Calendar {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Julian;
 
@@ -225,7 +228,7 @@ impl Calendar for Julian {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Gregorian;
 
