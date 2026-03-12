@@ -14,4 +14,4 @@ categories = [ "date-and-time" ]
 serde = { version = "1.0", default-features = false, features = [ "derive" ], optional = true }
 
 [dev-dependencies]
-float-cmp = { version = "0.9", default-features = false, features = [ "std" ] }
+float-cmp = { version = "0.10", default-features = false, features = [ "std" ] }
