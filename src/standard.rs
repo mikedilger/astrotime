@@ -2,6 +2,8 @@ use std::fmt::Debug;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "bitcode")]
+use bitcode::{Decode, Encode};
 
 use crate::duration::Duration;
 
@@ -30,6 +32,7 @@ pub trait Standard: Debug + Sized + Copy {
 /// All dates before this extrapolate backwards.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(Decode, Encode))]
 pub struct Tt;
 impl Standard for Tt {
     fn abbrev() -> &'static str {
@@ -54,6 +57,7 @@ impl Standard for Tt {
 /// before this as if TAI extends backwards.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(Decode, Encode))]
 pub struct Tai;
 impl Standard for Tai {
     fn abbrev() -> &'static str {
@@ -84,6 +88,7 @@ impl Standard for Tai {
 /// from TAI.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(Decode, Encode))]
 pub struct Utc;
 impl Standard for Utc {
     fn abbrev() -> &'static str {
@@ -112,6 +117,7 @@ impl Standard for Utc {
 /// prolepticly in the past.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(Decode, Encode))]
 pub struct Tcg;
 impl Standard for Tcg {
     fn abbrev() -> &'static str {

@@ -5,6 +5,8 @@ use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "bitcode")]
+use bitcode::{Decode, Encode};
 
 /// Duration is an interval of time
 ///
@@ -16,6 +18,7 @@ use serde::{Deserialize, Serialize};
 /// Stored in 128 bits.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(Decode, Encode))]
 pub struct Duration {
     pub(crate) secs: i64,
 

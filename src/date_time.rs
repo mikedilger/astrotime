@@ -7,6 +7,8 @@ use std::ops::{Add, Sub};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "bitcode")]
+use bitcode::{Decode, Encode};
 
 use crate::calendar::{Calendar, Gregorian, Julian};
 use crate::duration::Duration;
@@ -55,6 +57,7 @@ use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64, ATTOS_PER_SEC_U64};
 /// easier to work with, and has such date precomputed and packed within.
 #[derive(Copy, Clone)] // is also Send
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(Decode, Encode))]
 pub struct DateTime<C: Calendar, S: Standard> {
     packed: u64,
     attos: u64,

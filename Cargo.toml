@@ -11,6 +11,7 @@ keywords = [ "time", "date" ]
 categories = [ "date-and-time" ]
 
 [dependencies]
+bitcode = { version = "0", features = [ "derive" ], default-features = false, optional = true }
 serde = { version = "1.0", default-features = false, features = [ "derive" ], optional = true }
 
 [dev-dependencies]

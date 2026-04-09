@@ -4,6 +4,8 @@ use crate::instant::Instant;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "bitcode")]
+use bitcode::{Decode, Encode};
 
 use std::fmt::Debug;
 
@@ -220,6 +222,7 @@ pub trait Calendar: Debug + Copy {
 
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(Decode, Encode))]
 pub struct Julian;
 
 impl Calendar for Julian {
@@ -230,6 +233,7 @@ impl Calendar for Julian {
 
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(Decode, Encode))]
 pub struct Gregorian;
 
 impl Calendar for Gregorian {

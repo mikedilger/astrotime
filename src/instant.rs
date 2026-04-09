@@ -3,6 +3,8 @@ use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "bitcode")]
+use bitcode::{Decode, Encode};
 
 use crate::calendar::Calendar;
 use crate::date_time::DateTime;
@@ -27,6 +29,7 @@ use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64};
 // January 1st, 1977 CE Gregorian, 00:00:00.000 TAI
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(Decode, Encode))]
 pub struct Instant(pub(crate) Duration);
 
 impl Instant {
