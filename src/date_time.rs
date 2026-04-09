@@ -5,10 +5,10 @@ use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::ops::{Add, Sub};
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 #[cfg(feature = "bitcode")]
 use bitcode::{Decode, Encode};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use crate::calendar::{Calendar, Gregorian, Julian};
 use crate::duration::Duration;
@@ -531,6 +531,10 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     }
 
     /// Set the year, leaving other fields unchanged
+    ///
+    /// # Errors
+    ///
+    /// Errors if the day is outside of the month being set
     #[inline]
     #[allow(clippy::cast_sign_loss)]
     pub fn set_year(&mut self, year: i32) -> Result<(), Error> {
@@ -545,6 +549,10 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     }
 
     /// Set the year with a BC year, leaving other fields unchanged
+    ///
+    /// # Errors
+    ///
+    /// Errors if the day is outside of the month in the BC year being set
     #[inline]
     #[allow(clippy::cast_sign_loss)]
     pub fn set_year_bc(&mut self, year_bc: i32) -> Result<(), Error> {
@@ -637,9 +645,9 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
             if self.minute() != 59 {
                 return Err(Error::RangeError);
             }
-            let i: Instant = (*self).clone().into();
+            let i: Instant = (*self).into();
             let mut j = i;
-            j = j + Duration::new(61, 0);
+            j += Duration::new(61, 0);
             let at_i = crate::leaps::leap_seconds_elapsed_at(i);
             let at_j = crate::leaps::leap_seconds_elapsed_at(j);
             if at_i >= at_j {

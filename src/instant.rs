@@ -1,10 +1,10 @@
 use std::convert::TryFrom;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 #[cfg(feature = "bitcode")]
 use bitcode::{Decode, Encode};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use crate::calendar::Calendar;
 use crate::date_time::DateTime;

@@ -27,7 +27,6 @@
 //! println!("{} seconds", d.seconds_part());
 //! ```
 
-
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 
 mod error;

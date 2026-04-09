@@ -2,13 +2,12 @@ use crate::epoch::Epoch;
 use crate::error::Error;
 use crate::instant::Instant;
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 #[cfg(feature = "bitcode")]
 use bitcode::{Decode, Encode};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use std::fmt::Debug;
-
 
 /// This specifies traditional Calendar settings that use the traditional 12 months
 /// and have leap years. This is implemented for `Gregorian` and `Julian`. It does

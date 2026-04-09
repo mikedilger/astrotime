@@ -1,9 +1,9 @@
 use std::fmt::Debug;
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 #[cfg(feature = "bitcode")]
 use bitcode::{Decode, Encode};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use crate::duration::Duration;
 
