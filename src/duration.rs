@@ -117,7 +117,7 @@ impl fmt::Display for Duration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // herein we reflect through 0, so no div_modulo.
         // We only show a negative sign at the front
-        if self.secs < 0 {
+        if self.is_negative() {
             write!(f, "-P")?; // negative period designator
         } else {
             write!(f, "P")?; // period designator
