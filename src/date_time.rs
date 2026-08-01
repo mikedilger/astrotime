@@ -1184,7 +1184,7 @@ mod test {
         let mut g = DateTime::<Gregorian, Tt>::new(1965, 3, 7, 14, 29, 42, 500_000_000_000_000_000)
             .unwrap();
 
-        g.set_year(1921);
+        g.set_year(1921).unwrap();
         assert_eq!(g.year(), 1921);
 
         g.set_month(1).unwrap();
