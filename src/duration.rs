@@ -86,7 +86,10 @@ impl Duration {
         sec_part.checked_add(self.attos)
     }
 
-    /// As number of seconds expressed as an f64.
+    /// As number of seconds expressed as an `f64`.
+    ///
+    /// Precision is limited by the `f64` representation, especially for
+    /// durations with a large whole-seconds component.
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
     pub const fn as_f64_seconds(&self) -> f64 {
@@ -99,10 +102,14 @@ impl Duration {
         self.secs == 0 && self.attos == 0
     }
 
-    /// Determine if the duration is negative
+    /// Determine if the duration is negative.
+    ///
+    /// `Duration` values are normalized, so this is equivalent to testing
+    /// whether the seconds component is negative or the sub-second component
+    /// is negative when the seconds component is zero.
     #[must_use]
     pub const fn is_negative(&self) -> bool {
-        self.secs < 0 || self.attos < 0
+        self.secs < 0 || (self.secs == 0 && self.attos < 0)
     }
 }
 
@@ -241,6 +248,8 @@ impl TryFrom<std::time::Duration> for Duration {
     }
 }
 
+/// Converts to `std::time::Duration`, truncating any precision finer than
+/// nanoseconds. Negative durations return [`crate::Error::RangeError`].
 impl TryFrom<Duration> for std::time::Duration {
     type Error = crate::error::Error;
 
@@ -261,6 +270,47 @@ impl TryFrom<Duration> for std::time::Duration {
 mod test {
     use super::Duration;
     use crate::ATTOS_PER_SEC_I64;
+
+    #[test]
+    fn test_duration_f64_seconds() {
+        assert_eq!(
+            Duration::new(12, 345_000_000_000_000_000).as_f64_seconds(),
+            12.345
+        );
+        assert_eq!(
+            Duration::new(-12, -345_000_000_000_000_000).as_f64_seconds(),
+            -12.345
+        );
+        assert_eq!(Duration::new(0, -1).as_f64_seconds(), -1e-18);
+    }
+
+    #[test]
+    fn test_duration_is_negative() {
+        assert!(!Duration::new(0, 0).is_negative());
+        assert!(!Duration::new(1, -1).is_negative());
+        assert!(Duration::new(0, -1).is_negative());
+        assert!(Duration::new(-1, 1).is_negative());
+    }
+
+    #[test]
+    fn test_duration_to_std_duration() {
+        assert_eq!(
+            std::time::Duration::try_from(Duration::new(12, 345_678_901_234_567_890)).unwrap(),
+            std::time::Duration::new(12, 345_678_901),
+        );
+        assert_eq!(
+            std::time::Duration::try_from(Duration::new(0, 999_999_999_999_999_999)).unwrap(),
+            std::time::Duration::new(0, 999_999_999),
+        );
+        assert!(matches!(
+            std::time::Duration::try_from(Duration::new(0, -1)),
+            Err(crate::Error::RangeError),
+        ));
+        assert!(matches!(
+            std::time::Duration::try_from(Duration::new(-1, 0)),
+            Err(crate::Error::RangeError),
+        ));
+    }
 
     #[test]
     fn test_duration_normalize() {
