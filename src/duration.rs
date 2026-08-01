@@ -241,6 +241,22 @@ impl TryFrom<std::time::Duration> for Duration {
     }
 }
 
+impl TryFrom<Duration> for std::time::Duration {
+    type Error = crate::error::Error;
+
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_sign_loss)]
+    fn try_from(d: Duration) -> Result<Self, Self::Error> {
+        if d.is_negative() {
+            return Err(crate::error::Error::RangeError);
+        }
+        Ok(Self::new(
+            d.seconds_part().cast_unsigned(),
+            (d.attos_part() / 1_000_000_000) as u32,
+        ))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::Duration;
