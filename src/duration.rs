@@ -98,6 +98,12 @@ impl Duration {
     pub const fn is_zero(&self) -> bool {
         self.secs == 0 && self.attos == 0
     }
+
+    /// Determine if the duration is negative
+    #[must_use]
+    pub const fn is_negative(&self) -> bool {
+        self.secs < 0 || self.attos < 0
+    }
 }
 
 impl fmt::Display for Duration {
