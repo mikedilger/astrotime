@@ -112,9 +112,9 @@ impl Duration {
         self.secs < 0 || (self.secs == 0 && self.attos < 0)
     }
 
-    /// Checked multiply by u64
+    /// Checked multiply by a `u64`.
     ///
-    /// Returns None on overflow
+    /// Returns `None` on overflow
     #[must_use]
     pub fn checked_mul(&self, multiplier: u64) -> Option<Self> {
         let total_attos = i128::from(self.secs)
@@ -124,6 +124,33 @@ impl Duration {
 
         let secs = total_attos.div_euclid(crate::ATTOS_PER_SEC_I128);
         let attos = total_attos.rem_euclid(crate::ATTOS_PER_SEC_I128);
+
+        Some(Self {
+            secs: i64::try_from(secs).ok()?,
+            attos: i64::try_from(attos).ok()?,
+        })
+    }
+
+    /// Checked division by a `u64`.
+    ///
+    /// The result is truncated toward zero at attosecond precision. Returns
+    /// `None` when `divisor` is zero.
+    #[must_use]
+    pub fn checked_div(&self, divisor: u64) -> Option<Self> {
+        if divisor == 0 {
+            return None;
+        }
+
+        let total_attos = i128::from(self.secs)
+            .checked_mul(crate::ATTOS_PER_SEC_I128)?
+            .checked_add(i128::from(self.attos))?;
+        let quotient = total_attos / i128::from(divisor);
+
+        // `/` on signed integers truncates toward zero. Splitting the result
+        // with `/` and `%` preserves that behavior and the Duration sign
+        // invariant (unlike div_euclid/rem_euclid for negative values).
+        let secs = quotient / crate::ATTOS_PER_SEC_I128;
+        let attos = quotient % crate::ATTOS_PER_SEC_I128;
 
         Some(Self {
             secs: i64::try_from(secs).ok()?,
@@ -599,5 +626,15 @@ mod test {
         let result = value.checked_mul(13).unwrap();
         assert_eq!(result.secs, 32);
         assert_eq!(result.attos, 500_000_000_000_000_000);
+    }
+
+    #[test]
+    fn test_checked_div_u64() {
+        let value = Duration::new(5, 0);
+        assert_eq!(value.checked_div(2), Some(Duration::new(2, 500_000_000_000_000_000)));
+        assert_eq!(Duration::new(1, 0).checked_div(3), Some(Duration::new(0, 333_333_333_333_333_333)));
+        assert_eq!(Duration::new(-5, 0).checked_div(2), Some(Duration::new(-2, -500_000_000_000_000_000)));
+        assert_eq!(Duration::new(-1, 0).checked_div(3), Some(Duration::new(0, -333_333_333_333_333_333)));
+        assert_eq!(value.checked_div(0), None);
     }
 }
