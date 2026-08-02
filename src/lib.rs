@@ -35,6 +35,7 @@ pub use error::Error;
 pub const ATTOS_PER_SEC_I64: i64 = 1_000_000_000_000_000_000;
 pub const ATTOS_PER_SEC_U64: u64 = 1_000_000_000_000_000_000;
 pub const ATTOS_PER_SEC_F64: f64 = 1_000_000_000_000_000_000.;
+pub const ATTOS_PER_SEC_I128: i128 = 1_000_000_000_000_000_000;
 
 mod duration;
 pub use duration::Duration;

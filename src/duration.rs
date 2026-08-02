@@ -111,6 +111,25 @@ impl Duration {
     pub const fn is_negative(&self) -> bool {
         self.secs < 0 || (self.secs == 0 && self.attos < 0)
     }
+
+    /// Checked multiply by u64
+    ///
+    /// Returns None on overflow
+    #[must_use]
+    pub fn checked_mul(&self, multiplier: u64) -> Option<Self> {
+        let total_attos = i128::from(self.secs)
+            .checked_mul(crate::ATTOS_PER_SEC_I128)?
+            .checked_add(i128::from(self.attos))?
+            .checked_mul(i128::from(multiplier))?;
+
+        let secs = total_attos.div_euclid(crate::ATTOS_PER_SEC_I128);
+        let attos = total_attos.rem_euclid(crate::ATTOS_PER_SEC_I128);
+
+        Some(Self {
+            secs: i64::try_from(secs).ok()?,
+            attos: i64::try_from(attos).ok()?,
+        })
+    }
 }
 
 impl fmt::Display for Duration {
@@ -569,5 +588,16 @@ mod test {
     #[should_panic(expected = "Duration divisor must be finite")]
     fn test_div_f64_by_infinity_panics() {
         let _ = Duration::new(1, 0) / f64::INFINITY;
+    }
+
+    #[test]
+    fn test_mul_u64() {
+        let value = Duration {
+            secs: 2,
+            attos: 500_000_000_000_000_000,
+        };
+        let result = value.checked_mul(13).unwrap();
+        assert_eq!(result.secs, 32);
+        assert_eq!(result.attos, 500_000_000_000_000_000);
     }
 }
