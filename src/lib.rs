@@ -1,23 +1,29 @@
 //! astrotime
 //!
-//! Astrotime is a rust library for dealing with time for scientific and
-//! astronomical purposes on the surface of the Earth, or for satellites
-//! of the Earth. It is not sufficient for space travel or for solar system
-//! objects.
+//! Astrotime is a Rust library for representing and manipulating time:
+//! * with attosecond precision;
+//! * across a span of time about 40 times as long as the age of the universe;
+//! * with scientific and astronomical time standards such as TAI, TT, and TCG;
+//! * with Gregorian and Julian calendar representations.
 //!
-//! Here is an example of getting the current time:
+//! Astrotime does not aim to support:
+//! * space travel or time modeling for Solar System objects;
+//! * civil-time concerns such as time zones and daylight saving time.
+//!
+//! It does handle leap seconds accurately enough to support UTC.
+//!
+//! Here is an example of getting the current dated time:
 //!
 //! ```rust
 //! # use astrotime::*;
-//! let now = std::time::SystemTime::now();
-//! let now: DatedInstant = TryFrom::try_from(now).unwrap();
+//! let now = DatedInstant::now().unwrap();
 //! let date: DateTime<Gregorian, Utc> = now.into();
 //! println!("{}", date);
 //! ```
 //!
-//! How many seconds have elasped since the UNIX epoch, until New Years
-//! 2026?  This will yield `1767225628` seconds.  Unixtime for that moment
-//! was `1767225600` because it ignores the leap seconds that also passed.
+//! How many seconds have elapsed between the Unix epoch and New Year's Day
+//! 2026? This will yield `1767225628` seconds. Unix time for that moment was
+//! `1767225600` because it ignores the leap seconds that also passed.
 //!
 //! ```rust
 //! # use astrotime::*;
@@ -25,6 +31,29 @@
 //! let n: DatedInstant = now.into();
 //! let d: Duration = n - Epoch::Unix.as_dated_instant();
 //! println!("{} seconds", d.seconds_part());
+//! ```
+//!
+//! A `DatedInstant` can also represent the same moment across different time
+//! standards. This example starts with a TAI date and converts it to UTC via
+//! `DatedInstant`:
+//!
+//! ```rust
+//! # use astrotime::*;
+//! let tai = DateTime::<Gregorian, Tai>::new(2026, 1, 1, 0, 0, 0, 0).unwrap();
+//! let dated: DatedInstant = tai.into();
+//! let utc: DateTime<Gregorian, Utc> = dated.into();
+//! println!("{}", utc);
+//! ```
+//!
+//! `MonotonicInstant` is for measuring elapsed time and deadlines. It has no
+//! epoch and cannot be converted to a calendar date:
+//!
+//! ```rust
+//! # use astrotime::*;
+//! let start = MonotonicInstant::now();
+//! let deadline = start + Duration::new(1, 0);
+//! let until_deadline = deadline - start;
+//! assert_eq!(until_deadline, Duration::new(1, 0));
 //! ```
 
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
