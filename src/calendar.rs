@@ -1,6 +1,6 @@
+use crate::dated_instant::DatedInstant;
 use crate::epoch::Epoch;
 use crate::error::Error;
-use crate::instant::Instant;
 
 #[cfg(feature = "bitcode")]
 use bitcode::{Decode, Encode};
@@ -34,11 +34,11 @@ pub trait Calendar: Debug + Copy {
 
     /// Epoch this calendar starts from
     #[must_use]
-    fn epoch() -> Instant {
+    fn epoch() -> DatedInstant {
         if <Self as Calendar>::is_gregorian() {
-            Epoch::GregorianCalendar.as_instant()
+            Epoch::GregorianCalendar.as_dated_instant()
         } else {
-            Epoch::JulianCalendar.as_instant()
+            Epoch::JulianCalendar.as_dated_instant()
         }
     }
 

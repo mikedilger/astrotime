@@ -14,7 +14,7 @@ The following features are currently available:
 * `Duration`s:
     * Handles times covering the entire duration of the universe.
     * Handles times to attosecond precision.
-* `Instant`s:
+* `DatedInstant`s:
     * Math operations with Durations
     * `now()` functionality (via `std::time::SystemTime`)
     * Julian Day support
@@ -29,7 +29,7 @@ The following features are currently available:
     * Day, month, year, hour, minute, second
     * Handles the well known month length and leap year oddities.
     * Using and converting between calendar standards: Gregorian, Julian
-* Conversion between `Instant`s and `DateTime`s.
+* Conversion between `DatedInstant`s and `DateTime`s.
 * Optional serde serialization (enable feature 'serde')
 
 ### Currently Excluded
@@ -57,7 +57,7 @@ that implement any of these:
   'time' crates, including rust std SystemTime.
 * Add GPS time and LORAN-C
 * Add Sidereal time
-* impl ApproxEq from the float_cmp trait for Duration, Instant, and DateTime
+* impl ApproxEq from the float_cmp trait for Duration, DatedInstant, and DateTime
 
 ## Types
 
@@ -77,9 +77,10 @@ nanoseconds, and since computers these days tend to be 64-bit, it seemed that ha
 word was being wasted. So I extended the fractional seconds part to handle attoseconds.
 The biggest downside is typing all 18 zeroes.
 
-### DateTime and Instant
+### DateTime and DatedInstant
 
-There are two types that represent an instant or moment in time.
+There are two types that represent an instant or moment in time that is demarcated
+by a dated time coorindate system.
 
 The first type is a `DateTime<Calendar, Standard>`, which allows easy
 creation and manipulation of dates using Calendars such as `Gregorian` or
@@ -90,13 +91,13 @@ minute, second and attosecond in a packed format. It is 128 bits in size.
 A `DateTime` can have a minimum and maximum year within an `i32` type. Thus
 it does not span the same duration of time that a `Duration` does.
 
-The second type is an `Instant` with an opaque implementation, which is also
-128 bits in size. `Instant`s can be subtracted to get a `Duration`, and a
-`Duration` can be added to or subtracted from an `Instant` to get a
-different `Instant`.  `Instants` can span the full duration of time that
-`Duration` supports.  `Instant`s can convert to and from `DateTime`s
-of varying `Calendar` and `Stanadard` parameters providing automatic
-conversion between said `Calendar`s and `Standard`s.  `Instant`s can
+The second type is a `DatedInstant` with an opaque implementation, which is also
+128 bits in size. `DatedInstant`s can be subtracted to get a `Duration`, and a
+`Duration` can be added to or subtracted from a `DatedInstant` to get a
+different `DatedInstant`. `DatedInstant`s can span the full duration of time that
+`Duration` supports. `DatedInstant`s can convert to and from `DateTime`s
+of varying `Calendar` and `Standard` parameters providing automatic
+conversion between said `Calendar`s and `Standard`s. `DatedInstant`s can
 also be converted to and from Julian Days.
 
 ### Epochs

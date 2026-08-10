@@ -10,7 +10,7 @@
 //! ```rust
 //! # use astrotime::*;
 //! let now = std::time::SystemTime::now();
-//! let now: Instant = TryFrom::try_from(now).unwrap();
+//! let now: DatedInstant = TryFrom::try_from(now).unwrap();
 //! let date: DateTime<Gregorian, Utc> = now.into();
 //! println!("{}", date);
 //! ```
@@ -22,8 +22,8 @@
 //! ```rust
 //! # use astrotime::*;
 //! let now: DateTime<Gregorian, Utc> = DateTime::new(2026, 1, 1, 0, 0, 0, 0).unwrap();
-//! let n: Instant = now.into();
-//! let d: Duration = n - Epoch::Unix.as_instant();
+//! let n: DatedInstant = now.into();
+//! let d: Duration = n - Epoch::Unix.as_dated_instant();
 //! println!("{} seconds", d.seconds_part());
 //! ```
 
@@ -40,8 +40,8 @@ pub const ATTOS_PER_SEC_I128: i128 = 1_000_000_000_000_000_000;
 mod duration;
 pub use duration::Duration;
 
-mod instant;
-pub use instant::Instant;
+mod dated_instant;
+pub use dated_instant::DatedInstant;
 
 mod epoch;
 pub use epoch::Epoch;

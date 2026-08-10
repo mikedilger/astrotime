@@ -1,7 +1,7 @@
+use crate::dated_instant::DatedInstant;
 use crate::duration::Duration;
-use crate::instant::Instant;
 
-/// A reference for a well known `Instant` in time, used for offsetting events from.
+/// A reference for a well known `DatedInstant` in time, used for offsetting events from.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Epoch {
     /// The start of the Julian Period,
@@ -85,58 +85,58 @@ pub enum Epoch {
 }
 
 impl Epoch {
-    /// Generate the `Instant` that this `Epoch` refers to
+    /// Generate the `DatedInstant` that this `Epoch` refers to
     #[must_use]
-    pub const fn as_instant(&self) -> Instant {
+    pub const fn as_dated_instant(&self) -> DatedInstant {
         match *self {
             // NOTE: all instants are internally represented in TT standard.
-            Self::JulianPeriod => Instant(Duration {
+            Self::JulianPeriod => DatedInstant(Duration {
                 secs: -211_087_684_832,
                 attos: -184_000_000_000_000_000,
             }),
-            Self::JulianCalendar => Instant(Duration {
+            Self::JulianCalendar => DatedInstant(Duration {
                 secs: -62_356_694_432,
                 attos: -184_000_000_000_000_000,
             }),
-            Self::GregorianCalendar => Instant(Duration {
+            Self::GregorianCalendar => DatedInstant(Duration {
                 secs: -62_356_521_632,
                 attos: -184_000_000_000_000_000,
             }),
-            Self::Spreadsheet => Instant(Duration {
+            Self::Spreadsheet => DatedInstant(Duration {
                 secs: -2_430_086_391,
                 attos: -0,
             }),
-            Self::J1900_0 => Instant(Duration {
+            Self::J1900_0 => DatedInstant(Duration {
                 secs: -2_429_956_832,
                 attos: -184_000_000_000_000_000,
             }),
-            Self::Ntp => Instant(Duration {
+            Self::Ntp => DatedInstant(Duration {
                 secs: -2_429_913_591,
                 attos: -0,
             }),
-            Self::Unix => Instant(Duration {
+            Self::Unix => DatedInstant(Duration {
                 secs: -220_924_791,
                 attos: -0,
             }),
-            Self::TimeStandard => Instant(Duration { secs: 0, attos: 0 }),
-            Self::Y1977 => Instant(Duration { secs: 16, attos: 0 }),
-            Self::J1991_25 => Instant(Duration {
+            Self::TimeStandard => DatedInstant(Duration { secs: 0, attos: 0 }),
+            Self::Y1977 => DatedInstant(Duration { secs: 16, attos: 0 }),
+            Self::J1991_25 => DatedInstant(Duration {
                 secs: 449_674_167,
                 attos: 816_000_000_000_000_000,
             }),
-            Self::Y2k => Instant(Duration {
+            Self::Y2k => DatedInstant(Duration {
                 secs: 725_760_032,
                 attos: 0,
             }),
-            Self::J2000_0 => Instant(Duration {
+            Self::J2000_0 => DatedInstant(Duration {
                 secs: 725_803_167,
                 attos: 816_000_000_000_000_000,
             }),
-            Self::J2100_0 => Instant(Duration {
+            Self::J2100_0 => DatedInstant(Duration {
                 secs: 3_881_563_167,
                 attos: 816_000_000_000_000_000,
             }),
-            Self::J2200_0 => Instant(Duration {
+            Self::J2200_0 => DatedInstant(Duration {
                 secs: 7_037_323_167,
                 attos: 816_000_000_000_000_000,
             }),
@@ -149,15 +149,15 @@ mod test {
     use super::Epoch;
     use crate::calendar::{Gregorian, Julian};
     use crate::date_time::DateTime;
-    use crate::instant::Instant;
+    use crate::dated_instant::DatedInstant;
     use crate::standard::{Tai, Tt, Utc};
 
     macro_rules! epoch_check {
         ($epoch:expr, $cal:ty, $std:ty, $def:expr) => {
-            let instant = $epoch.as_instant();
+            let instant = $epoch.as_dated_instant();
             let dt: DateTime<$cal, $std> = From::from(instant);
             assert_eq!(dt, $def);
-            let check: Instant = From::from(dt);
+            let check: DatedInstant = From::from(dt);
             assert_eq!(instant, check);
         };
     }
@@ -253,57 +253,65 @@ mod test {
     #[test]
     fn test_instant_julian_day_formatted() {
         assert_eq!(
-            Epoch::JulianPeriod.as_instant().as_julian_day_formatted(),
+            Epoch::JulianPeriod
+                .as_dated_instant()
+                .as_julian_day_formatted(),
             "JD 0"
         );
         assert_eq!(
-            Epoch::JulianCalendar.as_instant().as_julian_day_formatted(),
+            Epoch::JulianCalendar
+                .as_dated_instant()
+                .as_julian_day_formatted(),
             "JD 1721423.5"
         );
         assert_eq!(
             Epoch::GregorianCalendar
-                .as_instant()
+                .as_dated_instant()
                 .as_julian_day_formatted(),
             "JD 1721425.5"
         );
         assert_eq!(
-            Epoch::Spreadsheet.as_instant().as_julian_day_formatted(),
+            Epoch::Spreadsheet
+                .as_dated_instant()
+                .as_julian_day_formatted(),
             "JD 2415018.5004766666666667"
         );
         assert_eq!(
-            Epoch::J1900_0.as_instant().as_julian_day_formatted(),
+            Epoch::J1900_0.as_dated_instant().as_julian_day_formatted(),
             "JD 2415020"
         );
         assert_eq!(
-            Epoch::Ntp.as_instant().as_julian_day_formatted(),
+            Epoch::Ntp.as_dated_instant().as_julian_day_formatted(),
             "JD 2415020.5004766666666667"
         );
         assert_eq!(
-            Epoch::Unix.as_instant().as_julian_day_formatted(),
+            Epoch::Unix.as_dated_instant().as_julian_day_formatted(),
             "JD 2440587.5004766666666667"
         );
         assert_eq!(
-            Epoch::TimeStandard.as_instant().as_julian_day_formatted(),
+            Epoch::TimeStandard
+                .as_dated_instant()
+                .as_julian_day_formatted(),
             "JD 2443144.5003725"
         );
         assert_eq!(
-            Epoch::J1991_25.as_instant().as_julian_day_formatted(),
+            Epoch::J1991_25.as_dated_instant().as_julian_day_formatted(),
             "JD 2448349.0625"
         );
         assert_eq!(
-            Epoch::Y2k.as_instant().as_julian_day_formatted(),
+            Epoch::Y2k.as_dated_instant().as_julian_day_formatted(),
             "JD 2451544.5007428703703704"
         );
         assert_eq!(
-            Epoch::J2000_0.as_instant().as_julian_day_formatted(),
+            Epoch::J2000_0.as_dated_instant().as_julian_day_formatted(),
             "JD 2451545"
         );
         assert_eq!(
-            Epoch::J2100_0.as_instant().as_julian_day_formatted(),
+            Epoch::J2100_0.as_dated_instant().as_julian_day_formatted(),
             "JD 2488070"
         );
         assert_eq!(
-            Epoch::J2200_0.as_instant().as_julian_day_formatted(),
+            Epoch::J2200_0.as_dated_instant().as_julian_day_formatted(),
             "JD 2524595"
         );
     }

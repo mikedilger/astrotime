@@ -1,4 +1,4 @@
-use crate::{Duration, Epoch, Instant};
+use crate::{DatedInstant, Duration, Epoch};
 
 /*
  *  LEAP SECONDS occur like this
@@ -53,11 +53,11 @@ const IANA_NTP_LEAP_SECONDS: &[i64] = &[
     3692217600, //	37	# 1 Jan 2017
 ];
 
-/// This returns the `Instant`s directly after leap seconds.
+/// This returns the `DatedInstant`s directly after leap seconds.
 ///
 /// It is mainly for internal use as this crate handles leap seconds automatically,
 /// but it is exposed nonetheless.
-pub fn leap_instants() -> impl Iterator<Item = Instant> {
+pub fn leap_instants() -> impl Iterator<Item = DatedInstant> {
     LeapInstantIter { i: 0 }
 }
 
@@ -66,7 +66,7 @@ pub struct LeapInstantIter {
 }
 
 impl Iterator for LeapInstantIter {
-    type Item = Instant;
+    type Item = DatedInstant;
 
     #[allow(clippy::cast_possible_wrap)] // usizes here are going to be small
     fn next(&mut self) -> Option<Self::Item> {
@@ -85,7 +85,7 @@ impl Iterator for LeapInstantIter {
             // Bump the internal counter for iteration
             self.i += 1;
 
-            Some(Epoch::Ntp.as_instant() + offset)
+            Some(Epoch::Ntp.as_dated_instant() + offset)
         }
     }
 }
@@ -99,7 +99,7 @@ impl Iterator for LeapInstantIter {
 /// If it is immediately after, which is at the IANA instant itself,
 /// then it does.
 #[must_use]
-pub fn leap_seconds_elapsed_at(i: Instant) -> i64 {
+pub fn leap_seconds_elapsed_at(i: DatedInstant) -> i64 {
     let mut count: i64 = 0;
     for leap_instant in leap_instants() {
         if i >= leap_instant {
@@ -114,42 +114,42 @@ pub fn leap_seconds_elapsed_at(i: Instant) -> i64 {
 #[cfg(test)]
 mod test {
     use super::{leap_instants, leap_seconds_elapsed_at};
-    use crate::{DateTime, Epoch, Gregorian, Instant, Utc};
+    use crate::{DateTime, DatedInstant, Epoch, Gregorian, Utc};
 
     #[test]
     fn test_leap_instants() {
         let fourth = leap_instants().skip(3).next().unwrap();
-        let dur = fourth - Epoch::Ntp.as_instant();
+        let dur = fourth - Epoch::Ntp.as_dated_instant();
         assert_eq!(dur.secs, 2335219200 + 4);
     }
 
     #[test]
     fn test_leap_seconds_elapsed_at() {
         // before any leaps
-        let at: Instant =
+        let at: DatedInstant =
             From::from(DateTime::<Gregorian, Utc>::new(1970, 9, 17, 13, 45, 18, 0).unwrap());
         assert_eq!(leap_seconds_elapsed_at(at), 0);
 
         // between leap 3 and 4
-        let at: Instant =
+        let at: DatedInstant =
             From::from(DateTime::<Gregorian, Utc>::new(1973, 9, 17, 13, 45, 18, 0).unwrap());
         assert_eq!(leap_seconds_elapsed_at(at), 3);
 
         // inside of leap second 4
-        let at: Instant = From::from(
+        let at: DatedInstant = From::from(
             DateTime::<Gregorian, Utc>::new(1973, 12, 31, 0, 0, 60, 500_000_000_000_000_000)
                 .unwrap(),
         );
         assert_eq!(leap_seconds_elapsed_at(at), 3);
 
         // after leap second 4
-        let at: Instant = From::from(
+        let at: DatedInstant = From::from(
             DateTime::<Gregorian, Utc>::new(1974, 1, 1, 0, 0, 0, 500_000_000_000_000_000).unwrap(),
         );
         assert_eq!(leap_seconds_elapsed_at(at), 4);
 
         // after all leaps
-        let at: Instant =
+        let at: DatedInstant =
             From::from(DateTime::<Gregorian, Utc>::new(2019, 9, 17, 13, 45, 18, 0).unwrap());
         assert_eq!(leap_seconds_elapsed_at(at), 28);
     }

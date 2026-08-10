@@ -11,10 +11,10 @@ use bitcode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 use crate::calendar::{Calendar, Gregorian, Julian};
+use crate::dated_instant::DatedInstant;
 use crate::duration::Duration;
 use crate::epoch::Epoch;
 use crate::error::Error;
-use crate::instant::Instant;
 use crate::standard::{Standard, Tai, Tcg, Tt, Utc};
 use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64, ATTOS_PER_SEC_U64};
 
@@ -53,7 +53,7 @@ use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64, ATTOS_PER_SEC_U64};
 ///
 /// Internally this is stored in a packed format and is 128 bits in size.
 ///
-/// This represents the same thing that an `Instant` does, but it makes `Calendar` data
+/// This represents the same thing that a `DatedInstant` does, but it makes `Calendar` data
 /// easier to work with, and has such date precomputed and packed within.
 #[derive(Copy, Clone)] // is also Send
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -403,7 +403,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
         if let Some(scale) = S::tt_scale() {
             let dur_since_sync = {
                 let instant = C::epoch() + duration;
-                let dss = instant - Epoch::TimeStandard.as_instant();
+                let dss = instant - Epoch::TimeStandard.as_dated_instant();
                 dss.secs as f64 + dss.attos as f64 / ATTOS_PER_SEC_F64
             };
             let shift = dur_since_sync * scale;
@@ -645,7 +645,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
             if self.minute() != 59 {
                 return Err(Error::RangeError);
             }
-            let i: Instant = (*self).into();
+            let i: DatedInstant = (*self).into();
             let mut j = i;
             j += Duration::new(61, 0);
             let at_i = crate::leaps::leap_seconds_elapsed_at(i);
@@ -762,7 +762,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
         if let Some(scale) = S::tt_scale() {
             let dur_since_sync = {
                 let instant = C::epoch() + d;
-                let dss = instant - Epoch::TimeStandard.as_instant();
+                let dss = instant - Epoch::TimeStandard.as_dated_instant();
                 dss.secs as f64 + dss.attos as f64 / ATTOS_PER_SEC_F64
             };
             let shift = dur_since_sync * scale;
@@ -771,7 +771,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
 
         // Leap second adjustment
         if S::abbrev() == "UTC" {
-            let close: Instant = C::epoch() + d;
+            let close: DatedInstant = C::epoch() + d;
             let approx_leaps = crate::leaps::leap_seconds_elapsed_at(close);
             let actual_leaps =
                 crate::leaps::leap_seconds_elapsed_at(close + Duration::new(approx_leaps + 1, 0));
@@ -938,88 +938,88 @@ impl<S: Standard> TryFrom<DateTime<Julian, S>> for DateTime<Gregorian, S> {
 // are not equal. So we specify all pairwise combinations:
 impl<C: Calendar> From<DateTime<C, Tt>> for DateTime<C, Tai> {
     fn from(s1: DateTime<C, Tt>) -> Self {
-        // Convert through Instant
-        let i: Instant = s1.into();
+        // Convert through DatedInstant
+        let i: DatedInstant = s1.into();
         i.into()
     }
 }
 impl<C: Calendar> From<DateTime<C, Tt>> for DateTime<C, Utc> {
     fn from(s1: DateTime<C, Tt>) -> Self {
-        // Convert through Instant
-        let i: Instant = s1.into();
+        // Convert through DatedInstant
+        let i: DatedInstant = s1.into();
         i.into()
     }
 }
 impl<C: Calendar> From<DateTime<C, Tt>> for DateTime<C, Tcg> {
     fn from(s1: DateTime<C, Tt>) -> Self {
-        // Convert through Instant
-        let i: Instant = s1.into();
+        // Convert through DatedInstant
+        let i: DatedInstant = s1.into();
         i.into()
     }
 }
 
 impl<C: Calendar> From<DateTime<C, Tai>> for DateTime<C, Tt> {
     fn from(s1: DateTime<C, Tai>) -> Self {
-        // Convert through Instant
-        let i: Instant = s1.into();
+        // Convert through DatedInstant
+        let i: DatedInstant = s1.into();
         i.into()
     }
 }
 impl<C: Calendar> From<DateTime<C, Tai>> for DateTime<C, Utc> {
     fn from(s1: DateTime<C, Tai>) -> Self {
-        // Convert through Instant
-        let i: Instant = s1.into();
+        // Convert through DatedInstant
+        let i: DatedInstant = s1.into();
         i.into()
     }
 }
 impl<C: Calendar> From<DateTime<C, Tai>> for DateTime<C, Tcg> {
     fn from(s1: DateTime<C, Tai>) -> Self {
-        // Convert through Instant
-        let i: Instant = s1.into();
+        // Convert through DatedInstant
+        let i: DatedInstant = s1.into();
         i.into()
     }
 }
 
 impl<C: Calendar> From<DateTime<C, Utc>> for DateTime<C, Tt> {
     fn from(s1: DateTime<C, Utc>) -> Self {
-        // Convert through Instant
-        let i: Instant = s1.into();
+        // Convert through DatedInstant
+        let i: DatedInstant = s1.into();
         i.into()
     }
 }
 impl<C: Calendar> From<DateTime<C, Utc>> for DateTime<C, Tai> {
     fn from(s1: DateTime<C, Utc>) -> Self {
-        // Convert through Instant
-        let i: Instant = s1.into();
+        // Convert through DatedInstant
+        let i: DatedInstant = s1.into();
         i.into()
     }
 }
 impl<C: Calendar> From<DateTime<C, Utc>> for DateTime<C, Tcg> {
     fn from(s1: DateTime<C, Utc>) -> Self {
-        // Convert through Instant
-        let i: Instant = s1.into();
+        // Convert through DatedInstant
+        let i: DatedInstant = s1.into();
         i.into()
     }
 }
 
 impl<C: Calendar> From<DateTime<C, Tcg>> for DateTime<C, Tt> {
     fn from(s1: DateTime<C, Tcg>) -> Self {
-        // Convert through Instant
-        let i: Instant = s1.into();
+        // Convert through DatedInstant
+        let i: DatedInstant = s1.into();
         i.into()
     }
 }
 impl<C: Calendar> From<DateTime<C, Tcg>> for DateTime<C, Tai> {
     fn from(s1: DateTime<C, Tcg>) -> Self {
-        // Convert through Instant
-        let i: Instant = s1.into();
+        // Convert through DatedInstant
+        let i: DatedInstant = s1.into();
         i.into()
     }
 }
 impl<C: Calendar> From<DateTime<C, Tcg>> for DateTime<C, Utc> {
     fn from(s1: DateTime<C, Tcg>) -> Self {
-        // Convert through Instant
-        let i: Instant = s1.into();
+        // Convert through DatedInstant
+        let i: DatedInstant = s1.into();
         i.into()
     }
 }
@@ -1030,7 +1030,7 @@ mod test {
     use crate::calendar::{Gregorian, Julian};
     use crate::standard::{Tai, Tcg, Tt, Utc};
     use crate::{ATTOS_PER_SEC_I64, ATTOS_PER_SEC_U64};
-    use crate::{Duration, Epoch, Instant};
+    use crate::{DatedInstant, Duration, Epoch};
 
     #[test]
     fn test_range_errors() {
@@ -1350,34 +1350,34 @@ mod test {
 
     #[test]
     fn test_datetime_instant_conversions_in_tt() {
-        let p1: Instant = Epoch::J1991_25.as_instant();
+        let p1: DatedInstant = Epoch::J1991_25.as_dated_instant();
         let d: DateTime<Gregorian, Tt> = p1.into();
-        let p2: Instant = d.into();
+        let p2: DatedInstant = d.into();
         assert_eq!(p1, p2);
 
         let d1 = DateTime::<Gregorian, Tt>::new(1993, 6, 30, 0, 0, 27, 0).unwrap();
-        let p: Instant = d1.into();
+        let p: DatedInstant = d1.into();
         let d2: DateTime<Gregorian, Tt> = p.into();
         assert_eq!(d1, d2);
     }
 
     #[test]
     fn test_datetime_instant_conversions_without_leapseconds() {
-        let p1: Instant = Epoch::J1991_25.as_instant();
+        let p1: DatedInstant = Epoch::J1991_25.as_dated_instant();
         let d: DateTime<Gregorian, Tai> = p1.into();
-        let p2: Instant = d.into();
+        let p2: DatedInstant = d.into();
         assert_eq!(p1, p2);
 
         let d1 = DateTime::<Gregorian, Tai>::new(1993, 6, 30, 0, 0, 27, 0).unwrap();
-        let p: Instant = d1.into();
+        let p: DatedInstant = d1.into();
         let d2: DateTime<Gregorian, Tai> = p.into();
         assert_eq!(d1, d2);
     }
 
     #[test]
     fn test_datetime_instant_conversions_with_leapseconds() {
-        let leap_instant = Instant::from_ntp_date(2429913600, 0);
-        assert_eq!(leap_instant, Epoch::Y1977.as_instant()); // FAILLING, but why?
+        let leap_instant = DatedInstant::from_ntp_date(2429913600, 0);
+        assert_eq!(leap_instant, Epoch::Y1977.as_dated_instant()); // FAILLING, but why?
         let date: DateTime<Gregorian, Utc> = leap_instant.into();
         let expected_date = DateTime::<Gregorian, Utc>::new(1977, 1, 1, 0, 0, 0, 0).unwrap();
         assert_eq!(date, expected_date);
@@ -1402,7 +1402,7 @@ mod test {
 
     #[test]
     fn test_time_standard_conversions() {
-        let p: Instant =
+        let p: DatedInstant =
             From::from(DateTime::<Gregorian, Tai>::new(1993, 6, 30, 0, 0, 27, 0).unwrap());
         let q: DateTime<Gregorian, Utc> = From::from(p);
         assert_eq!(
@@ -1410,14 +1410,14 @@ mod test {
             DateTime::<Gregorian, Utc>::new(1993, 6, 30, 0, 0, 0, 0).unwrap()
         );
 
-        let p: Instant = Epoch::Unix.as_instant();
+        let p: DatedInstant = Epoch::Unix.as_dated_instant();
         let q: DateTime<Gregorian, Utc> = From::from(p);
         assert_eq!(
             q,
             DateTime::<Gregorian, Utc>::new(1970, 1, 1, 0, 0, 0, 0).unwrap()
         );
 
-        let y2k: Instant = Epoch::Y2k.as_instant();
+        let y2k: DatedInstant = Epoch::Y2k.as_dated_instant();
         let q: DateTime<Gregorian, Utc> = From::from(y2k);
         assert_eq!(
             q,
@@ -1428,7 +1428,7 @@ mod test {
     #[test]
     fn test_instant_datetime_utc_range() {
         // Test UTC in the vacinity of a leap second (1 January 1999)
-        let leap_instant: Instant = From::from(
+        let leap_instant: DatedInstant = From::from(
             DateTime::<Gregorian, Tt>::new(1999, 1, 1, 0, 0, 0, 0).unwrap()
                 - Duration::new(32 + 32, 184_000_000_000_000_000),
         );
@@ -1436,7 +1436,7 @@ mod test {
             println!("s={}", s);
             let a = leap_instant + Duration::new(s, 0);
             let dt: DateTime<Gregorian, Utc> = a.into();
-            let b: Instant = dt.into();
+            let b: DatedInstant = dt.into();
             assert_eq!(a, b);
         }
     }
