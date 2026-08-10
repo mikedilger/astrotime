@@ -631,10 +631,22 @@ mod test {
     #[test]
     fn test_checked_div_u64() {
         let value = Duration::new(5, 0);
-        assert_eq!(value.checked_div(2), Some(Duration::new(2, 500_000_000_000_000_000)));
-        assert_eq!(Duration::new(1, 0).checked_div(3), Some(Duration::new(0, 333_333_333_333_333_333)));
-        assert_eq!(Duration::new(-5, 0).checked_div(2), Some(Duration::new(-2, -500_000_000_000_000_000)));
-        assert_eq!(Duration::new(-1, 0).checked_div(3), Some(Duration::new(0, -333_333_333_333_333_333)));
+        assert_eq!(
+            value.checked_div(2),
+            Some(Duration::new(2, 500_000_000_000_000_000))
+        );
+        assert_eq!(
+            Duration::new(1, 0).checked_div(3),
+            Some(Duration::new(0, 333_333_333_333_333_333))
+        );
+        assert_eq!(
+            Duration::new(-5, 0).checked_div(2),
+            Some(Duration::new(-2, -500_000_000_000_000_000))
+        );
+        assert_eq!(
+            Duration::new(-1, 0).checked_div(3),
+            Some(Duration::new(0, -333_333_333_333_333_333))
+        );
         assert_eq!(value.checked_div(0), None);
     }
 }
