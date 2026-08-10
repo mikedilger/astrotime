@@ -19,6 +19,10 @@ The following features are currently available:
     * `now()` functionality (via `std::time::SystemTime`)
     * Julian Day support
     * NTP Date support
+* `MonotonicInstant`s:
+    * Monotonic elapsed-time measurement
+    * Deadline arithmetic
+    * Wraps `std::time::Instant`
 * `Epoch`s
     * Supplies precise instants for well known Epochs such as J1900.0, J2000.0, the Unix epoch, Y2K, NTP dates, Spreadsheet date epoch, etc.
 * `Standard`s of time, and conversions between them
@@ -79,8 +83,8 @@ The biggest downside is typing all 18 zeroes.
 
 ### DateTime and DatedInstant
 
-There are two types that represent an instant or moment in time that is demarcated
-by a dated time coorindate system.
+These are the types that represent an instant or moment in time that is
+demarcated by a dated time coordinate system.
 
 The first type is a `DateTime<Calendar, Standard>`, which allows easy
 creation and manipulation of dates using Calendars such as `Gregorian` or
@@ -99,6 +103,20 @@ different `DatedInstant`. `DatedInstant`s can span the full duration of time tha
 of varying `Calendar` and `Standard` parameters providing automatic
 conversion between said `Calendar`s and `Standard`s. `DatedInstant`s can
 also be converted to and from Julian Days.
+
+### MonotonicInstant
+
+`MonotonicInstant` is an opaque point on a platform monotonic clock. It has no
+epoch and cannot be converted to a calendar date. It is intended for elapsed
+time measurement, deadlines, and ordering events within one monotonic clock
+domain.
+
+It wraps `std::time::Instant`, so its precision and range are platform
+dependent. Arithmetic with `astrotime::Duration` truncates at the nanosecond
+boundary when crossing into the standard-library clock.
+
+Unlike `DatedInstant`, a `MonotonicInstant` is not serializable and must not be
+compared or subtracted with a `DatedInstant`.
 
 ### Epochs
 

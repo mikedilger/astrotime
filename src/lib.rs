@@ -43,6 +43,9 @@ pub use duration::Duration;
 mod dated_instant;
 pub use dated_instant::DatedInstant;
 
+mod monotonic_instant;
+pub use monotonic_instant::MonotonicInstant;
+
 mod epoch;
 pub use epoch::Epoch;
 
