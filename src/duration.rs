@@ -139,18 +139,8 @@ impl Duration {
     /// Returns `None` on overflow
     #[must_use]
     pub fn checked_mul(&self, multiplier: u64) -> Option<Self> {
-        let total_attos = i128::from(self.secs)
-            .checked_mul(crate::ATTOS_PER_SEC_I128)?
-            .checked_add(i128::from(self.attos))?
-            .checked_mul(i128::from(multiplier))?;
-
-        let secs = total_attos.div_euclid(crate::ATTOS_PER_SEC_I128);
-        let attos = total_attos.rem_euclid(crate::ATTOS_PER_SEC_I128);
-
-        Some(Self {
-            secs: i64::try_from(secs).ok()?,
-            attos: i64::try_from(attos).ok()?,
-        })
+        let total_attos = self.as_attos_i128().checked_mul(i128::from(multiplier))?;
+        Self::from_attos_i128(total_attos)
     }
 
     /// Checked addition. Returns `None` on overflow.
@@ -775,6 +765,16 @@ mod test {
         assert_eq!(
             Duration::from_attos_i128(Duration::MAX.as_attos_i128() + 1),
             None
+        );
+    }
+
+    #[test]
+    fn test_mul_u64_negative() {
+        let d = Duration::new(-1, -500_000_000_000_000_000);
+        assert_eq!(d.checked_mul(1), Some(d));
+        assert_eq!(
+            d.checked_mul(3),
+            Some(Duration::new(-4, -500_000_000_000_000_000))
         );
     }
 
