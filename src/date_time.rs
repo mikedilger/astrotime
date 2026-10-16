@@ -5,8 +5,6 @@ use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::ops::{Add, Sub};
 
-#[cfg(feature = "bitcode")]
-use bitcode::{Decode, Encode};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -55,11 +53,15 @@ use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64, ATTOS_PER_SEC_U64};
 ///
 /// This represents the same thing that a `DatedInstant` does, but it makes `Calendar` data
 /// easier to work with, and has such date precomputed and packed within.
+///
+/// `DateTime` has no bitcode encoding (only serde, which checks the values);
+/// with bitcode, encode a `DatedInstant` instead.
 #[derive(Copy, Clone)] // is also Send
 #[allow(clippy::unsafe_derive_deserialize)] // deserializing checks the values
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(try_from = "RawDateTime"))]
-#[cfg_attr(feature = "bitcode", derive(Decode, Encode))]
+// No bitcode here: its decoding can't check the values, and a bad DateTime
+// panics later. If you need bitcode, encode a DatedInstant instead.
 pub struct DateTime<C: Calendar, S: Standard> {
     packed: u64,
     attos: u64,
