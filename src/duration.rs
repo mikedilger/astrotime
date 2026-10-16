@@ -43,6 +43,18 @@ impl Duration {
         }
     }
 
+    /// The longest positive `Duration`.
+    pub const MAX: Self = Self {
+        secs: i64::MAX,
+        attos: ATTOS_PER_SEC_I64 - 1,
+    };
+
+    /// The longest negative `Duration`.
+    pub const MIN: Self = Self {
+        secs: i64::MIN,
+        attos: -(ATTOS_PER_SEC_I64 - 1),
+    };
+
     /// Make a new `Duration` with given number of seconds and attoseconds.
     #[must_use]
     pub const fn new(secs: i64, attos: i64) -> Self {
@@ -131,6 +143,56 @@ impl Duration {
         })
     }
 
+    /// Checked addition. Returns `None` on overflow.
+    #[must_use]
+    pub fn checked_add(self, rhs: Self) -> Option<Self> {
+        Self::from_attos_i128(self.as_attos_i128() + rhs.as_attos_i128())
+    }
+
+    /// Checked subtraction. Returns `None` on overflow.
+    #[must_use]
+    pub fn checked_sub(self, rhs: Self) -> Option<Self> {
+        Self::from_attos_i128(self.as_attos_i128() - rhs.as_attos_i128())
+    }
+
+    /// Checked negation. Returns `None` on overflow.
+    #[must_use]
+    pub fn checked_neg(self) -> Option<Self> {
+        Self::from_attos_i128(-self.as_attos_i128())
+    }
+
+    /// Saturating addition, stopping at `MAX` or `MIN`.
+    #[must_use]
+    pub fn saturating_add(self, rhs: Self) -> Self {
+        match self.checked_add(rhs) {
+            Some(d) => d,
+            None if rhs.is_negative() => Self::MIN,
+            None => Self::MAX,
+        }
+    }
+
+    /// Saturating subtraction, stopping at `MAX` or `MIN`.
+    #[must_use]
+    pub fn saturating_sub(self, rhs: Self) -> Self {
+        match self.checked_sub(rhs) {
+            Some(d) => d,
+            None if rhs.is_negative() => Self::MAX,
+            None => Self::MIN,
+        }
+    }
+
+    fn as_attos_i128(self) -> i128 {
+        i128::from(self.secs) * crate::ATTOS_PER_SEC_I128 + i128::from(self.attos)
+    }
+
+    // Truncating division keeps attos the same sign as secs
+    fn from_attos_i128(attos: i128) -> Option<Self> {
+        Some(Self {
+            secs: i64::try_from(attos / crate::ATTOS_PER_SEC_I128).ok()?,
+            attos: i64::try_from(attos % crate::ATTOS_PER_SEC_I128).ok()?,
+        })
+    }
+
     /// Checked division by a `u64`.
     ///
     /// The result is truncated toward zero at attosecond precision. Returns
@@ -209,10 +271,7 @@ impl Neg for Duration {
 
     #[inline]
     fn neg(self) -> Self {
-        Self {
-            secs: -self.secs,
-            attos: -self.attos,
-        }
+        self.checked_neg().expect("overflow when negating duration")
     }
 }
 
@@ -220,20 +279,14 @@ impl Add for Duration {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self {
-        let mut d = Self {
-            secs: self.secs + rhs.secs,
-            attos: self.attos + rhs.attos,
-        };
-        d.normalize();
-        d
+        self.checked_add(rhs)
+            .expect("overflow when adding durations")
     }
 }
 
 impl AddAssign<Self> for Duration {
     fn add_assign(&mut self, rhs: Self) {
-        self.secs += rhs.secs;
-        self.attos += rhs.attos;
-        self.normalize();
+        *self = *self + rhs;
     }
 }
 
@@ -241,20 +294,14 @@ impl Sub for Duration {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self {
-        let mut d = Self {
-            secs: self.secs - rhs.secs,
-            attos: self.attos - rhs.attos,
-        };
-        d.normalize();
-        d
+        self.checked_sub(rhs)
+            .expect("overflow when subtracting durations")
     }
 }
 
 impl SubAssign<Self> for Duration {
     fn sub_assign(&mut self, rhs: Self) {
-        self.secs -= rhs.secs;
-        self.attos -= rhs.attos;
-        self.normalize();
+        *self = *self - rhs;
     }
 }
 
@@ -536,6 +583,43 @@ mod test {
         x += d2;
         assert_eq!(x.secs, 8_623_499);
         assert_eq!(x.attos, 15_000);
+    }
+
+    #[test]
+    fn test_checked_and_saturating() {
+        let one = Duration::new(0, 1);
+        assert_eq!(Duration::MAX.checked_add(one), None);
+        assert_eq!(Duration::MIN.checked_sub(one), None);
+        assert_eq!(Duration::MIN.checked_neg(), None);
+        assert!(Duration::MAX.checked_neg().is_some());
+        assert_eq!(Duration::MAX.saturating_add(one), Duration::MAX);
+        assert_eq!(Duration::MIN.saturating_add(-one), Duration::MIN);
+        assert_eq!(Duration::MAX.saturating_sub(-one), Duration::MAX);
+        assert_eq!(Duration::MIN.saturating_sub(one), Duration::MIN);
+        assert_eq!(
+            Duration::MAX.checked_sub(one),
+            Some(Duration::new(i64::MAX, ATTOS_PER_SEC_I64 - 2))
+        );
+        assert_eq!(
+            Duration::new(1, 0).checked_sub(Duration::new(0, 1)),
+            Some(Duration::new(0, ATTOS_PER_SEC_I64 - 1))
+        );
+        assert_eq!(
+            Duration::new(-1, 0).checked_add(Duration::new(0, 1)),
+            Some(Duration::new(0, -(ATTOS_PER_SEC_I64 - 1)))
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "overflow when adding durations")]
+    fn test_add_overflow_panics() {
+        let _ = Duration::MAX + Duration::new(0, 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "overflow when subtracting durations")]
+    fn test_sub_overflow_panics() {
+        let _ = Duration::MIN - Duration::new(0, 1);
     }
 
     #[test]
