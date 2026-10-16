@@ -86,15 +86,8 @@ pub trait Calendar: Debug + Copy {
         let mut day = {
             365*y
 
-            // leap year first approximation
-                + y/4
-
-            // For dates before 1 B.C. (year 0) March 1st, we need to subtract 1 more day since
-            // 1 B.C. (year 0) is a leap year that our calculations above didn't catch.
-            // (To be branchless, we just use the sign bit from the year; i64 type stays negative)
-
-                //- (if y<0 { 1 } else { 0 })
-                + (y>>63)
+            // leap year first approximation (floor division, for negative years)
+                + y.div_euclid(4)
 
             // The number of days between march 1st and the start of the mth month
             // after march (brilliant!) (306 is the days in the 10 months from mar-dec)
@@ -107,9 +100,9 @@ pub trait Calendar: Debug + Copy {
         if <Self as Calendar>::is_gregorian() {
             day = day
             // leap year second approximation, Gregorian
-                - y/100
+                - y.div_euclid(100)
             // leap year third approximation, Gregorian
-                + y/400;
+                + y.div_euclid(400);
         }
 
         // revert back to january 1 basis (we were at march 1st, we need to move ahead)
@@ -164,15 +157,15 @@ pub trait Calendar: Debug + Copy {
         };
 
         // Calculate the year (march 1st basis)
-        let mut offset_year: i64 = (10_000 * day_number + 14780) / days_in_year_times_10000;
+        let mut offset_year: i64 =
+            (10_000 * day_number + 14780).div_euclid(days_in_year_times_10000);
 
         // Caculate the remaining days
         let calc_remaining_days = |day_number: i64, offset_year: i64| -> i64 {
-            let zeroeth_year = offset_year >> 63;
-            let mut remaining_days =
-                day_number - 365 * offset_year - offset_year / 4 - zeroeth_year;
+            let mut remaining_days = day_number - 365 * offset_year - offset_year.div_euclid(4);
             if <Self as Calendar>::is_gregorian() {
-                remaining_days = remaining_days + offset_year / 100 - offset_year / 400;
+                remaining_days =
+                    remaining_days + offset_year.div_euclid(100) - offset_year.div_euclid(400);
             }
             remaining_days
         };
@@ -368,6 +361,32 @@ mod test {
         assert_eq!(y, 2147483647);
         assert_eq!(m, 12);
         assert_eq!(d, 31);
+    }
+
+    #[test]
+    fn test_calendar_negative_leap_years() {
+        // 5 B.C. (year -4), 9 B.C. and 401 B.C. are leap years in both calendars
+        for y in [-4, -8, -400] {
+            let g =
+                Gregorian::day_number(y, 3, 1).unwrap() - Gregorian::day_number(y, 2, 28).unwrap();
+            let j = Julian::day_number(y, 3, 1).unwrap() - Julian::day_number(y, 2, 28).unwrap();
+            assert_eq!((g, j), (2, 2), "year {y}");
+            assert_eq!(
+                Gregorian::from_day_number(Gregorian::day_number(y, 2, 29).unwrap()).unwrap(),
+                (y, 2, 29)
+            );
+            assert_eq!(
+                Julian::from_day_number(Julian::day_number(y, 2, 29).unwrap()).unwrap(),
+                (y, 2, 29)
+            );
+        }
+        // and every day round trips
+        for dn in -800_000..800_000 {
+            let (y, m, d) = Gregorian::from_day_number(dn).unwrap();
+            assert_eq!(Gregorian::day_number(y, m, i64::from(d)).unwrap(), dn);
+            let (y, m, d) = Julian::from_day_number(dn).unwrap();
+            assert_eq!(Julian::day_number(y, m, i64::from(d)).unwrap(), dn);
+        }
     }
 
     #[test]
