@@ -146,7 +146,8 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     ///
     /// Will return `Error::RangeError` if any input is outside of the normal
     /// range (months from 1-12, days from 1-31, hours from 0-23, minutes from
-    /// 0-59, seconds from 0-60, attoseconds from 0-999_999_999_999_999_999)
+    /// 0-59, seconds from 0-60, attoseconds from 0-999_999_999_999_999_999),
+    /// or if second is 60 but this is not a UTC leap second.
     #[allow(clippy::manual_range_contains)]
     pub fn new(
         year: i32,
@@ -174,6 +175,12 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
         }
         if attosecond > 999_999_999_999_999_999 {
             return Err(Error::RangeError);
+        }
+        if second == 60 {
+            let mut dt =
+                unsafe { Self::new_unchecked(year, month, day, hour, minute, 59, attosecond) };
+            dt.set_second(60)?;
+            return Ok(dt);
         }
 
         Ok(unsafe { Self::new_unchecked(year, month, day, hour, minute, second, attosecond) })
@@ -645,12 +652,11 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     ///
     /// # Errors
     ///
-    /// Will return `Error::RangeError` if `second` is greater than 60.
-    /// The second of '60' should only be used for leapsecond situations, but
-    /// no error is thrown if used otherwise.
+    /// Will return `Error::RangeError` if `second` is greater than 60, or is
+    /// 60 but this is not a UTC leap second.
     pub fn set_second(&mut self, second: u8) -> Result<(), Error> {
         if second > 59 {
-            if second > 60 {
+            if second > 60 || S::abbrev() != "UTC" {
                 return Err(Error::RangeError);
             }
             // We check we are the last minute so that our '61' below doesn't
@@ -803,7 +809,11 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
                 return naive + offset;
             }
 
-            let close: DatedInstant = C::epoch() + d;
+            let mut close: DatedInstant = C::epoch() + d;
+            if self.second() == 60 {
+                // count leaps as of the second before
+                close -= Duration::new(1, 0);
+            }
             let approx_leaps = crate::leaps::leap_seconds_elapsed_at(close);
             let actual_leaps =
                 crate::leaps::leap_seconds_elapsed_at(close + Duration::new(approx_leaps + 1, 0));
@@ -1287,6 +1297,47 @@ mod test {
             366 * 86400 + 31 * 86400 + 86400 + 3600 + 3 * 60 + 5
         );
         assert_eq!(diff.attos_part(), 11);
+    }
+
+    #[test]
+    fn test_new_second_60() {
+        // Only a real leap second, and only in UTC
+        assert!(DateTime::<Gregorian, Utc>::new(2016, 12, 31, 23, 59, 60, 0).is_ok());
+        assert!(DateTime::<Gregorian, Utc>::new(2016, 12, 31, 23, 58, 60, 0).is_err());
+        assert!(DateTime::<Gregorian, Utc>::new(2020, 6, 15, 12, 0, 60, 0).is_err());
+        assert!(DateTime::<Gregorian, Utc>::new(2016, 12, 30, 23, 59, 60, 0).is_err());
+        assert!(DateTime::<Gregorian, Tai>::new(2016, 12, 31, 23, 59, 60, 0).is_err());
+        assert!(DateTime::<Gregorian, Tt>::new(2016, 12, 31, 23, 59, 60, 0).is_err());
+        // Before 1972, within the time added at the end of the day
+        assert!(
+            DateTime::<Gregorian, Utc>::new(1971, 12, 31, 23, 59, 60, 100_000_000_000_000_000)
+                .is_ok()
+        );
+        assert!(
+            DateTime::<Gregorian, Utc>::new(1971, 12, 31, 23, 59, 60, 200_000_000_000_000_000)
+                .is_err()
+        );
+        let mut dt = DateTime::<Gregorian, Tai>::new(2016, 12, 31, 23, 59, 59, 0).unwrap();
+        assert!(dt.set_second(60).is_err());
+
+        // A leap second is its own instant, between 59 and the next day
+        let half = 500_000_000_000_000_000;
+        let before: DatedInstant = DateTime::<Gregorian, Utc>::new(2016, 12, 31, 23, 59, 59, half)
+            .unwrap()
+            .into();
+        let during: DatedInstant = DateTime::<Gregorian, Utc>::new(2016, 12, 31, 23, 59, 60, half)
+            .unwrap()
+            .into();
+        let after: DatedInstant = DateTime::<Gregorian, Utc>::new(2017, 1, 1, 0, 0, 0, half)
+            .unwrap()
+            .into();
+        assert_eq!(during - before, Duration::new(1, 0));
+        assert_eq!(after - during, Duration::new(1, 0));
+        let leap = DateTime::<Gregorian, Utc>::new(2016, 12, 31, 23, 59, 60, half).unwrap();
+        assert_eq!(
+            DateTime::<Gregorian, Utc>::from(DatedInstant::from(leap)),
+            leap
+        );
     }
 
     #[test]

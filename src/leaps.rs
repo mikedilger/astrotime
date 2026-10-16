@@ -355,7 +355,7 @@ mod test {
 
         // inside of leap second 3
         let at: DatedInstant = From::from(
-            DateTime::<Gregorian, Utc>::new(1973, 12, 31, 0, 0, 60, 500_000_000_000_000_000)
+            DateTime::<Gregorian, Utc>::new(1973, 12, 31, 23, 59, 60, 500_000_000_000_000_000)
                 .unwrap(),
         );
         assert_eq!(leap_seconds_elapsed_at(at), 2);
