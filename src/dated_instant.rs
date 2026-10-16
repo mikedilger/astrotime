@@ -46,36 +46,45 @@ impl DatedInstant {
 
     /// Create from a Julian Day (low precision)
     ///
+    /// Julian Days here are in TT, counted from noon.
+    ///
     /// This is not as precise as `from_julian_day_parts`(), and much less precise than
     /// `from_julian_day_precise`()
+    ///
+    /// # Panics
+    ///
+    /// Panics if `jd` is not a number, or is out of range.
     #[must_use]
-    #[allow(clippy::cast_possible_truncation)]
     pub fn from_julian_day_f64(jd: f64) -> Self {
-        let fsecs = jd * 86400.0;
-        let whole_secs = fsecs.trunc() as i64;
-        let attos = (fsecs.fract() * ATTOS_PER_SEC_F64) as i64;
-        Epoch::JulianPeriod.as_dated_instant() + Duration::new(whole_secs, attos)
+        Epoch::JulianPeriod.as_dated_instant() + Duration::from_seconds(jd * 86400.0)
     }
 
     /// Create from a Julian Day (medium precision)
     ///
+    /// Julian Days here are in TT, counted from noon.
+    ///
     /// This is more precise than `from_julian_day_f64`() but not as precise as
     /// `from_julian_day_precise`()
+    ///
+    /// # Panics
+    ///
+    /// Panics if `day_fraction` is not a number, or either is out of range.
     #[must_use]
-    #[allow(clippy::cast_possible_truncation)]
     pub fn from_julian_day_parts(day: i64, day_fraction: f64) -> Self {
-        // FIXME - range bound this
-        let fsecs = day_fraction * 86400.;
-        let mut whole_secs = fsecs.trunc() as i64;
-        let attos = (fsecs.fract() * ATTOS_PER_SEC_F64) as i64;
-        whole_secs += day * 86400;
-        Epoch::JulianPeriod.as_dated_instant() + Duration::new(whole_secs, attos)
+        let days = day.checked_mul(86400).expect("Julian day out of range");
+        Epoch::JulianPeriod.as_dated_instant()
+            + Duration::new(days, 0)
+            + Duration::from_seconds(day_fraction * 86400.)
     }
 
     /// Create from a Julian Day (maximum precision)
     ///
-    /// This is more precise than `from_julian_day_f64`() but not as precise as
-    /// `from_julian_day_precise`()
+    /// Julian Days here are in TT, counted from noon. The day may be
+    /// negative (before JD 0), but the seconds and attoseconds count forward
+    /// from the start of it.
+    ///
+    /// This is more precise than `from_julian_day_parts`() and much more
+    /// precise than `from_julian_day_f64`()
     ///
     /// # Errors
     ///
@@ -98,7 +107,7 @@ impl DatedInstant {
         Ok(Epoch::JulianPeriod.as_dated_instant() + Duration::new(secs, attoseconds))
     }
 
-    /// As Julian day (low precision)
+    /// As Julian day (low precision), in TT
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
     pub fn as_julian_day_f64(&self) -> f64 {
@@ -106,35 +115,46 @@ impl DatedInstant {
         (since.secs as f64 + since.attos as f64 / ATTOS_PER_SEC_F64) / 86400.
     }
 
-    /// As Julian day (medium precision)
+    /// As Julian day (medium precision), in TT
     ///
-    /// This returns a day number and a day fraction.
+    /// This returns a day number and a day fraction, from 0 up to 1 even
+    /// before JD 0.
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
     pub fn as_julian_day_parts(&self) -> (i64, f64) {
-        let since = *self - Epoch::JulianPeriod.as_dated_instant();
-        let day = since.secs / 86400;
-        let rem = since.secs % 86400;
-        let frac = (rem as f64 + since.attos as f64 / ATTOS_PER_SEC_F64) / 86400.;
+        let (day, secs, attos) = self.as_julian_day_precise();
+        let frac = (secs as f64 + attos as f64 / ATTOS_PER_SEC_F64) / 86400.;
         (day, frac)
     }
 
-    /// As Julian day (high precision)
+    /// As Julian day (high precision), in TT
     ///
-    /// This returns a day number, a second number, and an attoseconds number
+    /// This returns a day number, a second number, and an attoseconds number.
+    /// The seconds and attoseconds are never negative, even before JD 0.
     #[must_use]
     pub fn as_julian_day_precise(&self) -> (i64, i64, i64) {
-        let since = *self - Epoch::JulianPeriod.as_dated_instant();
-        let day = since.secs / 86400;
-        let secs = since.secs % 86400;
-        (day, secs, since.attos)
+        let mut since = *self - Epoch::JulianPeriod.as_dated_instant();
+        if since.attos < 0 {
+            since.secs -= 1;
+            since.attos += ATTOS_PER_SEC_I64;
+        }
+        (
+            since.secs.div_euclid(86400),
+            since.secs.rem_euclid(86400),
+            since.attos,
+        )
     }
 
-    /// As julian day (formatted as a string)
+    /// As julian day (formatted as a string), in TT
     #[must_use]
     pub fn as_julian_day_formatted(&self) -> String {
+        let jd0 = Epoch::JulianPeriod.as_dated_instant();
+        if *self < jd0 {
+            let mirror = (jd0 + (jd0 - *self)).as_julian_day_formatted();
+            return mirror.replacen("JD ", "JD -", 1);
+        }
         let (day, frac) = self.as_julian_day_parts();
-        let fraction = format!("{frac}").trim_start_matches(['-', '0']).to_owned();
+        let fraction = format!("{frac}").trim_start_matches('0').to_owned();
         format!("JD {day}{fraction}")
     }
 
@@ -319,6 +339,31 @@ mod test {
             DatedInstant::from_julian_day_precise(2_443_144, 43200 + 32, 184_000_000_000_000_000)
                 .unwrap(),
             Epoch::TimeStandard.as_dated_instant()
+        );
+    }
+
+    #[test]
+    fn test_julian_day_before_zero() {
+        let hour_before = Epoch::JulianPeriod.as_dated_instant() - Duration::new(3600, 0);
+        assert_eq!(hour_before.as_julian_day_precise(), (-1, 82800, 0));
+        let (day, frac) = hour_before.as_julian_day_parts();
+        assert_eq!(day, -1);
+        assert!((frac - 23.0 / 24.0).abs() < 1e-15);
+        assert!((hour_before.as_julian_day_f64() + 1.0 / 24.0).abs() < 1e-15);
+        assert_eq!(
+            hour_before.as_julian_day_formatted(),
+            "JD -0.041666666666666664"
+        );
+
+        let i = Epoch::JulianPeriod.as_dated_instant() - Duration::new(86400 * 3 + 5, 7);
+        let (day, secs, attos) = i.as_julian_day_precise();
+        assert_eq!((day, secs, attos), (-4, 86394, ATTOS_PER_SEC_I64 - 7));
+        let back = DatedInstant::from_julian_day_precise(day, u32::try_from(secs).unwrap(), attos)
+            .unwrap();
+        assert_eq!(back, i);
+        assert_eq!(
+            DatedInstant::from_julian_day_parts(-1, 0.5),
+            Epoch::JulianPeriod.as_dated_instant() - Duration::new(43200, 0)
         );
     }
 
