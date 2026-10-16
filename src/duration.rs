@@ -181,6 +181,36 @@ impl Duration {
         }
     }
 
+    /// Multiply by an `f64`, to `f64` precision. Returns `None` on overflow,
+    /// or if the result is not a number.
+    #[must_use]
+    pub fn checked_mul_f64(self, rhs: f64) -> Option<Self> {
+        self.scale_f64(|x| x * rhs)
+    }
+
+    /// Divide by an `f64`, to `f64` precision. Returns `None` on overflow,
+    /// or if the result is not a number (such as dividing by zero).
+    #[must_use]
+    pub fn checked_div_f64(self, rhs: f64) -> Option<Self> {
+        self.scale_f64(|x| x / rhs)
+    }
+
+    // Scale the seconds and attoseconds separately, and add them up in i128
+    #[allow(clippy::cast_precision_loss)]
+    #[allow(clippy::cast_possible_truncation)]
+    fn scale_f64(self, f: impl Fn(f64) -> f64) -> Option<Self> {
+        let secs = f(self.secs as f64);
+        let attos = f(self.attos as f64);
+        // beyond this the seconds don't fit anyway
+        if !(secs.abs() < 1e19 && attos.abs() < 1e37) {
+            return None;
+        }
+        let total = secs.trunc() as i128 * crate::ATTOS_PER_SEC_I128
+            + (secs.fract() * ATTOS_PER_SEC_F64) as i128
+            + attos as i128;
+        Self::from_attos_i128(total)
+    }
+
     fn as_attos_i128(self) -> i128 {
         i128::from(self.secs) * crate::ATTOS_PER_SEC_I128 + i128::from(self.attos)
     }
@@ -308,89 +338,40 @@ impl SubAssign<Self> for Duration {
 impl Mul<f64> for Duration {
     type Output = Self;
 
-    #[allow(clippy::cast_possible_truncation)]
-    #[allow(clippy::cast_precision_loss)]
     fn mul(self, rhs: f64) -> Self::Output {
-        let newsecs = self.secs as f64 * rhs;
-        let secs = newsecs.trunc() as i64;
-        let overflow_attos = (newsecs.fract() * ATTOS_PER_SEC_F64) as i64;
-
-        let mut d = Self {
-            secs,
-            attos: ((self.attos as f64) * rhs) as i64 + overflow_attos,
-        };
-        d.normalize();
-        d
+        self.checked_mul_f64(rhs)
+            .expect("overflow when multiplying duration by float")
     }
 }
 
 impl Mul<Duration> for f64 {
     type Output = Duration;
 
-    #[allow(clippy::cast_possible_truncation)]
-    #[allow(clippy::cast_precision_loss)]
     fn mul(self, rhs: Duration) -> Self::Output {
-        let newsecs = rhs.secs as Self * self;
-        let secs = newsecs.trunc() as i64;
-        let overflow_attos = (newsecs.fract() * ATTOS_PER_SEC_F64) as i64;
-
-        let mut d = Duration {
-            secs,
-            attos: ((rhs.attos as Self) * self) as i64 + overflow_attos,
-        };
-        d.normalize();
-        d
+        rhs * self
     }
 }
 
 impl MulAssign<f64> for Duration {
-    #[allow(clippy::cast_possible_truncation)]
-    #[allow(clippy::cast_precision_loss)]
     fn mul_assign(&mut self, rhs: f64) {
-        let newsecs = self.secs as f64 * rhs;
-        self.secs = newsecs.trunc() as i64;
-
-        let overflow_attos = (newsecs.fract() * ATTOS_PER_SEC_F64) as i64;
-        self.attos = ((self.attos as f64) * rhs) as i64 + overflow_attos;
-
-        self.normalize();
+        *self = *self * rhs;
     }
 }
 
 impl Div<f64> for Duration {
     type Output = Self;
 
-    #[allow(clippy::cast_possible_truncation)]
-    #[allow(clippy::cast_precision_loss)]
     fn div(self, rhs: f64) -> Self::Output {
         assert!(rhs != 0.0, "cannot divide Duration by zero");
         assert!(rhs.is_finite(), "Duration divisor must be finite");
-        let newsecs = self.secs as f64 / rhs;
-        let secs = newsecs.trunc() as i64;
-        let overflow_attos = (newsecs.fract() * ATTOS_PER_SEC_F64) as i64;
-
-        let mut d = Self {
-            secs,
-            attos: ((self.attos as f64) / rhs) as i64 + overflow_attos,
-        };
-        d.normalize();
-        d
+        self.checked_div_f64(rhs)
+            .expect("overflow when dividing duration by float")
     }
 }
 
 impl DivAssign<f64> for Duration {
-    #[allow(clippy::cast_possible_truncation)]
-    #[allow(clippy::cast_precision_loss)]
     fn div_assign(&mut self, rhs: f64) {
-        assert!(rhs != 0.0, "cannot divide Duration by zero");
-        assert!(rhs.is_finite(), "Duration divisor must be finite");
-        let newsecs = self.secs as f64 / rhs;
-        self.secs = newsecs.trunc() as i64;
-
-        let overflow_attos = (newsecs.fract() * ATTOS_PER_SEC_F64) as i64;
-        self.attos = ((self.attos as f64) / rhs) as i64 + overflow_attos;
-
-        self.normalize();
+        *self = *self / rhs;
     }
 }
 
@@ -647,6 +628,29 @@ mod test {
         let m4 = d2 * 1.5;
         assert_eq!(m4.secs, -3);
         assert_eq!(m4.attos, -750_000_000_000_000_000);
+    }
+
+    #[test]
+    fn test_mul_div_f64_large() {
+        let half = Duration::new(0, 500_000_000_000_000_000);
+        assert_eq!(half * 100.0, Duration::new(50, 0));
+        assert_eq!(half / 0.01, Duration::new(50, 0));
+        assert_eq!(-half * 4096.0, Duration::new(-2048, 0));
+        let big = Duration::new(10_000_000_000, 0);
+        assert_eq!(big.checked_mul_f64(1e10), None);
+        assert_eq!(big.checked_div_f64(1e-10), None);
+        assert_eq!(big.checked_mul_f64(f64::NAN), None);
+        assert_eq!(big.checked_div_f64(0.0), None);
+        assert_eq!(
+            big.checked_mul_f64(0.5),
+            Some(Duration::new(5_000_000_000, 0))
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "overflow when multiplying duration by float")]
+    fn test_mul_f64_overflow_panics() {
+        let _ = Duration::new(10_000_000_000, 0) * 1e10;
     }
 
     #[test]
