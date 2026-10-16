@@ -6,12 +6,12 @@ use bitcode::{Decode, Encode};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::calendar::Calendar;
+use crate::calendar::{Calendar, Gregorian};
 use crate::date_time::DateTime;
 use crate::duration::Duration;
 use crate::epoch::Epoch;
 use crate::error::Error;
-use crate::standard::Standard;
+use crate::standard::{Standard, Utc};
 use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64};
 
 /// A `DatedInstant` is a precise moment in a named time coordinate system.
@@ -144,21 +144,22 @@ impl DatedInstant {
     /// incorrect durations from the NTP epoch (in that they don't include
     /// leap seconds).
     #[must_use]
-    #[allow(clippy::cast_precision_loss)]
+    #[allow(clippy::missing_panics_doc)] // days since 1900 fit
     pub fn as_ntp_date(&self) -> (i64, i64) {
-        let ntp_dur = *self - Epoch::Ntp.as_dated_instant();
-        let leaps = crate::leaps::leap_seconds_elapsed_at(*self);
-        (ntp_dur.secs - leaps, ntp_dur.attos)
+        // NTP counts UTC days of 86400 seconds
+        let utc: DateTime<Gregorian, Utc> = (*self).into();
+        let days = utc.day_number() - Gregorian::day_number(1900, 1, 1).unwrap();
+        let secs = days * 86400
+            + i64::from(utc.hour()) * 3600
+            + i64::from(utc.minute()) * 60
+            + i64::from(utc.second());
+        (secs, i64::try_from(utc.attosecond()).unwrap())
     }
 
     /// From an NTP date
     #[must_use]
     pub fn from_ntp_date(ntp_secs: i64, ntp_attos: i64) -> Self {
-        let close = Epoch::Ntp.as_dated_instant() + Duration::new(ntp_secs, ntp_attos);
-        let approx_leaps = crate::leaps::leap_seconds_elapsed_at(close);
-        let actual_leaps =
-            crate::leaps::leap_seconds_elapsed_at(close + Duration::new(approx_leaps + 1, 0));
-        close + Duration::new(actual_leaps, 0)
+        DateTime::<Gregorian, Utc>::new_abnormal(1900, 1, 1, 0, 0, ntp_secs, ntp_attos).into()
     }
 }
 
@@ -214,11 +215,9 @@ impl TryFrom<std::time::SystemTime> for DatedInstant {
     type Error = Error;
 
     fn try_from(s: std::time::SystemTime) -> Result<Self, Self::Error> {
-        // NOTE: std::time::SystemTime, like UNIX, lies about UTC times
-        //       in the past that cross leap seconds. When we compute the
-        //       duration_since(UNIX_EPOCH), we get a number that is short
-        //       by the total number of leap seconds that have occured.
-        //       We correct for this below.
+        // NOTE: std::time::SystemTime, like UNIX, counts UTC days of 86400
+        //       seconds, so it is short by the leap seconds (and by UTC's
+        //       slower seconds before 1972). We count the days instead.
         let since_unix_epoch_less_leaps: Duration = match s.duration_since(std::time::UNIX_EPOCH) {
             Ok(std_dur) => TryFrom::try_from(std_dur)?,
             Err(std_time_error) => {
@@ -228,18 +227,8 @@ impl TryFrom<std::time::SystemTime> for DatedInstant {
             }
         };
 
-        let mut instant = Epoch::Unix.as_dated_instant() + since_unix_epoch_less_leaps;
-
-        // Add the missing leap seconds
-        let leaps = crate::leap_seconds_elapsed_at(instant);
-        instant += Duration::new(leaps, 0);
-
-        // That correction might have caused the instant to move past yet
-        // one more leap second.  If so we should add it.
-        let leaps2 = crate::leap_seconds_elapsed_at(instant);
-        instant += Duration::new(leaps2 - leaps, 0);
-
-        Ok(instant)
+        let d = since_unix_epoch_less_leaps;
+        Ok(DateTime::<Gregorian, Utc>::new_abnormal(1970, 1, 1, 0, 0, d.secs, d.attos).into())
     }
 }
 
@@ -305,7 +294,7 @@ mod test {
         );
 
         assert_eq!(
-            DatedInstant::from_julian_day_precise(2440587, 43200 + 42, 184_000_000_000_000_000)
+            DatedInstant::from_julian_day_precise(2440587, 43200 + 40, 184_082_000_000_000_000)
                 .unwrap(),
             Epoch::Unix.as_dated_instant()
         );

@@ -28,7 +28,7 @@ pub enum Epoch {
     /// Which is December 30, 1899 CE gregorian, 00:00:00.0 UTC
     /// This is the point from which dates in a spreadsheet are counted
     /// as the (floating point) number of days since.
-    /// JD 2415018.500488240740  // 32.184 [TAI-TT] + 10 [UTC-TAI]
+    /// JD 2415018.500388967801  // 32.184 [TAI-TT] + 1.422818 [UTC-TAI]
     Spreadsheet,
 
     /// The J1900.0 astronomical epoch,
@@ -39,12 +39,12 @@ pub enum Epoch {
     /// The NTP time base used in the IANA leap seconds file
     /// which is January 1st, 1900 CE gregorian, 00:00:00.0 UTC
     /// (seconds elapsed since 1900-01-01 00:00:00 UTC, except the leap seconds themselves)
-    /// JD 2415020.500488240740  // 32.184 [TAI-TT] + 10 [UTC-TAI]
+    /// JD 2415020.500388967801  // 32.184 [TAI-TT] + 1.422818 [UTC-TAI]
     Ntp,
 
     /// The UNIX Epoch,
     /// which is January 1st, 1970 CE gregorian, 00:00:00.0 UTC
-    /// JD 2440587.500488240740  // 32.184 [TAI-TT] + 10 [UTC-TAI]
+    /// JD 2440587.500465093542  // 32.184 [TAI-TT] + 8.000082 [UTC-TAI]
     Unix,
 
     /// The epoch where TT, TCB, and TCG all read the same.
@@ -103,20 +103,20 @@ impl Epoch {
                 attos: -184_000_000_000_000_000,
             }),
             Self::Spreadsheet => DatedInstant(Duration {
-                secs: -2_430_086_390,
-                attos: -0,
+                secs: -2_430_086_398,
+                attos: -577_182_000_000_000_000,
             }),
             Self::J1900_0 => DatedInstant(Duration {
                 secs: -2_429_956_832,
                 attos: -184_000_000_000_000_000,
             }),
             Self::Ntp => DatedInstant(Duration {
-                secs: -2_429_913_590,
-                attos: -0,
+                secs: -2_429_913_598,
+                attos: -577_182_000_000_000_000,
             }),
             Self::Unix => DatedInstant(Duration {
-                secs: -220_924_790,
-                attos: -0,
+                secs: -220_924_791,
+                attos: -999_918_000_000_000_000,
             }),
             Self::TimeStandard => DatedInstant(Duration { secs: 0, attos: 0 }),
             Self::Y1977 => DatedInstant(Duration { secs: 16, attos: 0 }),
@@ -274,7 +274,7 @@ mod test {
             Epoch::Spreadsheet
                 .as_dated_instant()
                 .as_julian_day_formatted(),
-            "JD 2415018.5004882407407407"
+            "JD 2415018.5003889678009259"
         );
         assert_eq!(
             Epoch::J1900_0.as_dated_instant().as_julian_day_formatted(),
@@ -282,11 +282,11 @@ mod test {
         );
         assert_eq!(
             Epoch::Ntp.as_dated_instant().as_julian_day_formatted(),
-            "JD 2415020.5004882407407407"
+            "JD 2415020.5003889678009259"
         );
         assert_eq!(
             Epoch::Unix.as_dated_instant().as_julian_day_formatted(),
-            "JD 2440587.5004882407407407"
+            "JD 2440587.5004650935416667"
         );
         assert_eq!(
             Epoch::TimeStandard

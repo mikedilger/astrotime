@@ -78,13 +78,11 @@ impl Standard for Tai {
 /// This is civil time as usually reported.  It is discontinuous, having leap
 /// seconds inserted from time to time based on the Earth's rotation.
 ///
-/// This type is proleptic. For all dates prior to 1 Jan 1972, we presume
-/// UTC was offset from TAI by 10 seconds, as it was on that date, even though
-/// that's not what happened at the time (what happened at the time was that
-/// UTC wasn't syncronized to TAI by integer leap seconds, but rather to other
-/// time sources and contained fractional leap seconds).  For all dates prior
-/// to 1 January 1960, UTC didn't exist, but we pretend it did, offset 10
-/// seconds from TAI.
+/// From 1961 until 1972, UTC seconds were slightly longer than TAI seconds,
+/// and UTC was stepped by fractions of a second. We follow the published
+/// table of TAI-UTC for those years; time added at the end of a day shows as
+/// second 60. Before 1961 UTC didn't exist, but we pretend it did, offset
+/// from TAI as it was on 1 January 1961 (1.4228180 seconds).
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "bitcode", derive(Decode, Encode))]

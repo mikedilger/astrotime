@@ -385,6 +385,17 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
 
         // Leap second adjustment
         if S::abbrev() == "UTC" {
+            let to_gregorian = C::epoch() - Epoch::GregorianCalendar.as_dated_instant();
+            if let Some((label, second_60)) = crate::leaps::early_utc_label(duration + to_gregorian)
+            {
+                let cal = label - to_gregorian;
+                let mut output = Self::new_abnormal(1, 1, 1, 0, 0, cal.secs, cal.attos);
+                if second_60 {
+                    pack(&mut output.packed, SECOND_BITS, SECOND_OFFSET, 60);
+                }
+                return output;
+            }
+
             let instant = C::epoch() + duration;
 
             let leaps = crate::leaps::leap_seconds_elapsed_at(instant);
@@ -645,6 +656,19 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
             if self.minute() != 59 {
                 return Err(Error::RangeError);
             }
+            // Before 1972, UTC days could end with a fraction of a second added
+            if S::abbrev() == "UTC" {
+                let day_end = Duration::new((self.day_number() + 1) * 86400, 0)
+                    + (C::epoch() - Epoch::GregorianCalendar.as_dated_instant());
+                if let Some(added) = crate::leaps::early_added_at(day_end) {
+                    let atto = i64::try_from(self.attosecond()).unwrap_or(i64::MAX);
+                    if self.hour() != 23 || added <= Duration::new(0, atto) {
+                        return Err(Error::RangeError);
+                    }
+                    pack(&mut self.packed, SECOND_BITS, SECOND_OFFSET, 60);
+                    return Ok(());
+                }
+            }
             let i: DatedInstant = (*self).into();
             let mut j = i;
             j += Duration::new(61, 0);
@@ -771,6 +795,11 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
 
         // Leap second adjustment
         if S::abbrev() == "UTC" {
+            let label = naive + (C::epoch() - Epoch::GregorianCalendar.as_dated_instant());
+            if let Some(offset) = crate::leaps::early_utc_offset(label, self.second() == 60) {
+                return naive + offset;
+            }
+
             let close: DatedInstant = C::epoch() + d;
             let approx_leaps = crate::leaps::leap_seconds_elapsed_at(close);
             let actual_leaps =

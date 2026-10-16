@@ -22,8 +22,9 @@
 //! ```
 //!
 //! How many seconds have elapsed between the Unix epoch and New Year's Day
-//! 2026? This will yield `1767225627` seconds. Unix time for that moment was
-//! `1767225600` because it ignores the leap seconds that also passed.
+//! 2026? This will yield `1767225628` seconds (and 0.999918 more). Unix time
+//! for that moment was `1767225600` because it ignores the leap seconds that
+//! also passed, and UTC's slightly longer seconds before 1972.
 //!
 //! ```rust
 //! # use astrotime::*;

@@ -131,7 +131,7 @@ with a :59 and a :60 but unixtime has no such differentiator.
 
 Spreadsheets (starting with MicroSoft Excel?) store dates as a floating point count of days
 since December 30, 1899, at midnight. This epoch is very close to J1900.0 but is 36 hours
-(minus 42.184 seconds TT/UTC conversion) before J1900.0.
+(minus 33.606818 seconds TT/UTC conversion) before J1900.0.
 
 Astronomers use the TT (terrestrial time) standard, because leap second shifting, while
 it accounts for the rotation of the earth, confuses all other astronomical timings. For
