@@ -56,13 +56,16 @@ use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64, ATTOS_PER_SEC_U64};
 /// This represents the same thing that a `DatedInstant` does, but it makes `Calendar` data
 /// easier to work with, and has such date precomputed and packed within.
 #[derive(Copy, Clone)] // is also Send
+#[allow(clippy::unsafe_derive_deserialize)] // new_unchecked is only unsafe for bad values
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "bitcode", derive(Decode, Encode))]
 pub struct DateTime<C: Calendar, S: Standard> {
     packed: u64,
     attos: u64,
-    _cal: PhantomData<C>,
-    _std: PhantomData<S>,
+    #[cfg_attr(feature = "serde", serde(rename = "_cal"))]
+    cal: PhantomData<C>,
+    #[cfg_attr(feature = "serde", serde(rename = "_std"))]
+    std: PhantomData<S>,
 }
 
 // NOTE: Day and Month are packed with 0 basis (0 = 1st day or 1st month)
@@ -130,8 +133,8 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
         Self {
             packed,
             attos: attosecond,
-            _cal: PhantomData,
-            _std: PhantomData,
+            cal: PhantomData,
+            std: PhantomData,
         }
     }
 
@@ -1090,7 +1093,7 @@ mod test {
     #[test]
     fn test_normalize() {
         // This is right out of leap second file for 1 Jan 1972
-        let dt = DateTime::<Gregorian, Tt>::new_abnormal(1900, 1, 1, 0, 0, 2272060800, 0);
+        let dt = DateTime::<Gregorian, Tt>::new_abnormal(1900, 1, 1, 0, 0, 2_272_060_800, 0);
         assert_eq!(dt.year(), 1972);
         assert_eq!(dt.month(), 1);
         assert_eq!(dt.day(), 1);
@@ -1103,7 +1106,7 @@ mod test {
         // NOTE FIXME ELSEWHERE: t1900 must not include leap seconds, or else
         // this would be off by 2 as it does not account for the 2 leap seconds
         // added prior to it.
-        let dt = DateTime::<Gregorian, Tt>::new_abnormal(1900, 1, 1, 0, 0, 2303683200, 0);
+        let dt = DateTime::<Gregorian, Tt>::new_abnormal(1900, 1, 1, 0, 0, 2_303_683_200, 0);
         assert_eq!(dt.year(), 1973);
         assert_eq!(dt.month(), 1);
         assert_eq!(dt.day(), 1);
@@ -1165,12 +1168,12 @@ mod test {
         assert_eq!(dt, dt2);
 
         let dt = DateTime::<Gregorian, Tt>::new(2000, 1, 1, 0, 0, 0, 0).unwrap();
-        assert_eq!(dt.day_number(), 730119);
+        assert_eq!(dt.day_number(), 730_119);
 
         let dt2 = DateTime::<Gregorian, Tt>::from_day_number(dt.day_number()).unwrap();
         assert_eq!(dt, dt2);
 
-        assert_eq!(dt2.day_number(), dt.day_number())
+        assert_eq!(dt2.day_number(), dt.day_number());
     }
 
     #[test]
@@ -1239,7 +1242,7 @@ mod test {
 
         assert_eq!(g, h);
 
-        let mut g = DateTime::<Gregorian, Tt>::new(1997, 3, 30, 17, 24, 06, 2340897).unwrap();
+        let mut g = DateTime::<Gregorian, Tt>::new(1997, 3, 30, 17, 24, 6, 2_340_897).unwrap();
         assert!(g.set_month(2).is_err());
         assert_eq!(g.month(), 3);
         assert!(g.set_day(28).is_ok());
@@ -1260,7 +1263,7 @@ mod test {
             .unwrap();
         assert!(g < h);
         assert!(h < i);
-        assert!(i == j);
+        assert_eq!(i, j);
     }
 
     #[test]
@@ -1281,26 +1284,19 @@ mod test {
         let diff = g2 - g1;
         assert_eq!(
             diff.seconds_part(),
-            366 * 86400 + 31 * 86400 + 1 * 86400 + 1 * 3600 + 3 * 60 + 5
+            366 * 86400 + 31 * 86400 + 86400 + 3600 + 3 * 60 + 5
         );
         assert_eq!(diff.attos_part(), 11);
     }
 
     #[test]
     fn test_print_extremes() {
-        let min = DateTime::<Gregorian, Tt>::new(std::i32::MIN, 1, 1, 0, 0, 0, 0).unwrap();
-        println!("Min gregorian: {}", min);
-        let max = DateTime::<Gregorian, Tt>::new(
-            std::i32::MAX,
-            12,
-            31,
-            23,
-            59,
-            59,
-            999_999_999_999_999_999,
-        )
-        .unwrap();
-        println!("Max gregorian: {}", max);
+        let min = DateTime::<Gregorian, Tt>::new(i32::MIN, 1, 1, 0, 0, 0, 0).unwrap();
+        println!("Min gregorian: {min}");
+        let max =
+            DateTime::<Gregorian, Tt>::new(i32::MAX, 12, 31, 23, 59, 59, 999_999_999_999_999_999)
+                .unwrap();
+        println!("Max gregorian: {max}");
     }
 
     #[test]
@@ -1405,7 +1401,7 @@ mod test {
 
     #[test]
     fn test_datetime_instant_conversions_with_leapseconds() {
-        let leap_instant = DatedInstant::from_ntp_date(2429913600, 0);
+        let leap_instant = DatedInstant::from_ntp_date(2_429_913_600, 0);
         assert_eq!(leap_instant, Epoch::Y1977.as_dated_instant()); // FAILLING, but why?
         let date: DateTime<Gregorian, Utc> = leap_instant.into();
         let expected_date = DateTime::<Gregorian, Utc>::new(1977, 1, 1, 0, 0, 0, 0).unwrap();
@@ -1462,7 +1458,7 @@ mod test {
                 - Duration::new(32 + 32, 184_000_000_000_000_000),
         );
         for s in -100..100 {
-            println!("s={}", s);
+            println!("s={s}");
             let a = leap_instant + Duration::new(s, 0);
             let dt: DateTime<Gregorian, Utc> = a.into();
             let b: DatedInstant = dt.into();

@@ -261,11 +261,11 @@ mod test {
     #[test]
     fn test_dated_instant_julian_day_conversions() {
         assert_eq!(
-            DatedInstant::from_julian_day_parts(1721425, 0.5),
+            DatedInstant::from_julian_day_parts(1_721_425, 0.5),
             Epoch::GregorianCalendar.as_dated_instant()
         );
         assert_eq!(
-            DatedInstant::from_julian_day_parts(1721423, 0.5),
+            DatedInstant::from_julian_day_parts(1_721_423, 0.5),
             Epoch::JulianCalendar.as_dated_instant()
         );
         assert_eq!(
@@ -273,39 +273,39 @@ mod test {
             Epoch::JulianPeriod.as_dated_instant()
         );
         assert_eq!(
-            DatedInstant::from_julian_day_parts(2415020, 0.0),
+            DatedInstant::from_julian_day_parts(2_415_020, 0.0),
             Epoch::J1900_0.as_dated_instant()
         );
         assert_eq!(
-            DatedInstant::from_julian_day_parts(2448349, 0.0625),
+            DatedInstant::from_julian_day_parts(2_448_349, 0.0625),
             Epoch::J1991_25.as_dated_instant()
         );
         assert_eq!(
-            DatedInstant::from_julian_day_parts(2451545, 0.0),
+            DatedInstant::from_julian_day_parts(2_451_545, 0.0),
             Epoch::J2000_0.as_dated_instant()
         );
         assert_eq!(
-            DatedInstant::from_julian_day_parts(2488070, 0.0),
+            DatedInstant::from_julian_day_parts(2_488_070, 0.0),
             Epoch::J2100_0.as_dated_instant()
         );
         assert_eq!(
-            DatedInstant::from_julian_day_parts(2524595, 0.0),
+            DatedInstant::from_julian_day_parts(2_524_595, 0.0),
             Epoch::J2200_0.as_dated_instant()
         );
 
         assert_eq!(
-            DatedInstant::from_julian_day_precise(2440587, 43200 + 40, 184_082_000_000_000_000)
+            DatedInstant::from_julian_day_precise(2_440_587, 43200 + 40, 184_082_000_000_000_000)
                 .unwrap(),
             Epoch::Unix.as_dated_instant()
         );
         assert_eq!(
-            DatedInstant::from_julian_day_precise(2451544, 43200 + 64, 184_000_000_000_000_000)
+            DatedInstant::from_julian_day_precise(2_451_544, 43200 + 64, 184_000_000_000_000_000)
                 .unwrap(),
             Epoch::Y2k.as_dated_instant()
         );
 
         assert_eq!(
-            DatedInstant::from_julian_day_precise(2443144, 43200 + 32, 184_000_000_000_000_000)
+            DatedInstant::from_julian_day_precise(2_443_144, 43200 + 32, 184_000_000_000_000_000)
                 .unwrap(),
             Epoch::TimeStandard.as_dated_instant()
         );

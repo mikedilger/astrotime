@@ -255,7 +255,7 @@ mod test {
 
     #[test]
     fn test_leap_instants() {
-        let fourth = leap_instants().skip(3).next().unwrap();
+        let fourth = leap_instants().nth(3).unwrap();
         let after: DatedInstant =
             From::from(DateTime::<Gregorian, Utc>::new(1975, 1, 1, 0, 0, 0, 0).unwrap());
         assert_eq!(fourth, after);

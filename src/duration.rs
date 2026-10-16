@@ -494,31 +494,31 @@ mod test {
             secs: 86400 * 100,
             attos: 12000,
         };
-        assert_eq!(&*format!("{}", d), "P100DT0.000000000000012000S");
+        assert_eq!(&*format!("{d}"), "P100DT0.000000000000012000S");
         let d = Duration {
             secs: 86400 + 3600 * 2 + 60 + 1,
             attos: 120,
         };
-        assert_eq!(&*format!("{}", d), "P1DT2H1M1.000000000000000120S");
+        assert_eq!(&*format!("{d}"), "P1DT2H1M1.000000000000000120S");
         let d = Duration {
             secs: 60 * 3 + 5,
             attos: 15000,
         };
-        assert_eq!(&*format!("{}", d), "PT3M5.000000000000015000S");
+        assert_eq!(&*format!("{d}"), "PT3M5.000000000000015000S");
         let d = Duration {
             secs: -1,
             attos: -101,
         };
-        assert_eq!(&*format!("{}", d), "-PT1.000000000000000101S");
+        assert_eq!(&*format!("{d}"), "-PT1.000000000000000101S");
         let d = Duration {
             secs: -86400 * 3,
             attos: 31,
         };
-        assert_eq!(&*format!("{}", d), "-P3DT0.000000000000000031S");
+        assert_eq!(&*format!("{d}"), "-P3DT0.000000000000000031S");
         let d = Duration { secs: 0, attos: 31 };
-        assert_eq!(&*format!("{}", d), "PT0.000000000000000031S");
+        assert_eq!(&*format!("{d}"), "PT0.000000000000000031S");
         let d = Duration { secs: 0, attos: 0 };
-        assert_eq!(&*format!("{}", d), "P");
+        assert_eq!(&*format!("{d}"), "P");
     }
 
     #[test]
@@ -588,6 +588,7 @@ mod test {
         assert_eq!(m2.secs, 0);
         // 1/3 = 0.3333... so 333,333,333,333,333,333 attoseconds
         // with precision of f64, we might lose some low bits
+        #[allow(clippy::cast_possible_truncation)]
         let expected_attos = (1.0f64 / 3.0f64 * crate::ATTOS_PER_SEC_F64) as i64;
         assert_eq!(m2.attos, expected_attos);
 

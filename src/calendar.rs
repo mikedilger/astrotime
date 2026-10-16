@@ -340,25 +340,25 @@ mod test {
 
         // Year 2000
         let dn = Gregorian::day_number(2000, 1, 1).unwrap();
-        assert_eq!(dn, 730119);
-        let (y, m, d) = Gregorian::from_day_number(730119).unwrap();
+        assert_eq!(dn, 730_119);
+        let (y, m, d) = Gregorian::from_day_number(730_119).unwrap();
         assert_eq!((y, m, d), (2000, 1, 1));
 
         // Minimum
-        let dn = Gregorian::day_number(-2147483648, 1, 1).unwrap();
+        let dn = Gregorian::day_number(-2_147_483_648, 1, 1).unwrap();
         assert_eq!(dn, -784_352_296_671);
 
         let (y, m, d) = Gregorian::from_day_number(-784_352_296_671).unwrap();
-        assert_eq!(y, -2147483648);
+        assert_eq!(y, -2_147_483_648);
         assert_eq!(m, 1);
         assert_eq!(d, 1);
 
         // Maximum
-        let dn = Gregorian::day_number(2147483647, 12, 31).unwrap();
+        let dn = Gregorian::day_number(2_147_483_647, 12, 31).unwrap();
         assert_eq!(dn, 784_352_295_938);
 
         let (y, m, d) = Gregorian::from_day_number(784_352_295_938).unwrap();
-        assert_eq!(y, 2147483647);
+        assert_eq!(y, 2_147_483_647);
         assert_eq!(m, 12);
         assert_eq!(d, 31);
     }
@@ -401,25 +401,25 @@ mod test {
 
         // Year 2000
         let dn = Julian::day_number(2000, 1, 1).unwrap();
-        assert_eq!(dn, 730134);
+        assert_eq!(dn, 730_134);
         let (y, m, d) = Julian::from_day_number(dn).unwrap();
         assert_eq!(y, 2000);
         assert_eq!(m, 1);
         assert_eq!(d, 1);
 
         // Minimum
-        let dn = Julian::day_number(-2147483648, 1, 1).unwrap();
+        let dn = Julian::day_number(-2_147_483_648, 1, 1).unwrap();
         assert_eq!(dn, -784_368_402_798);
         let (y, m, d) = Julian::from_day_number(dn).unwrap();
-        assert_eq!(y, -2147483648);
+        assert_eq!(y, -2_147_483_648);
         assert_eq!(m, 1);
         assert_eq!(d, 1);
 
         // Maximum
-        let dn = Julian::day_number(2147483647, 12, 31).unwrap();
+        let dn = Julian::day_number(2_147_483_647, 12, 31).unwrap();
         assert_eq!(dn, 784_368_402_065);
         let (y, m, d) = Julian::from_day_number(dn).unwrap();
-        assert_eq!(y, 2147483647);
+        assert_eq!(y, 2_147_483_647);
         assert_eq!(m, 12);
         assert_eq!(d, 31);
     }
