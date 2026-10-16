@@ -221,12 +221,16 @@ impl Duration {
         Self::from_attos_i128(total)
     }
 
-    fn as_attos_i128(self) -> i128 {
+    /// The full value expressed in attoseconds, which always fits an `i128`.
+    #[must_use]
+    pub fn as_attos_i128(self) -> i128 {
         i128::from(self.secs) * crate::ATTOS_PER_SEC_I128 + i128::from(self.attos)
     }
 
-    // Truncating division keeps attos the same sign as secs
-    fn from_attos_i128(attos: i128) -> Option<Self> {
+    /// Make a new `Duration` from attoseconds. Returns `None` if out of range.
+    #[must_use]
+    pub fn from_attos_i128(attos: i128) -> Option<Self> {
+        // Truncating division keeps attos the same sign as secs
         Some(Self {
             secs: i64::try_from(attos / crate::ATTOS_PER_SEC_I128).ok()?,
             attos: i64::try_from(attos % crate::ATTOS_PER_SEC_I128).ok()?,
@@ -753,6 +757,25 @@ mod test {
         let result = value.checked_mul(13).unwrap();
         assert_eq!(result.secs, 32);
         assert_eq!(result.attos, 500_000_000_000_000_000);
+    }
+
+    #[test]
+    fn test_attos_i128() {
+        let d = Duration::new(-3, -250_000_000_000_000_000);
+        assert_eq!(d.as_attos_i128(), -3_250_000_000_000_000_000);
+        assert_eq!(Duration::from_attos_i128(d.as_attos_i128()), Some(d));
+        assert_eq!(
+            Duration::from_attos_i128(Duration::MAX.as_attos_i128()),
+            Some(Duration::MAX)
+        );
+        assert_eq!(
+            Duration::from_attos_i128(Duration::MIN.as_attos_i128()),
+            Some(Duration::MIN)
+        );
+        assert_eq!(
+            Duration::from_attos_i128(Duration::MAX.as_attos_i128() + 1),
+            None
+        );
     }
 
     #[test]
