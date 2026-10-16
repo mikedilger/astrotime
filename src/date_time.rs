@@ -56,8 +56,9 @@ use crate::{ATTOS_PER_SEC_F64, ATTOS_PER_SEC_I64, ATTOS_PER_SEC_U64};
 /// This represents the same thing that a `DatedInstant` does, but it makes `Calendar` data
 /// easier to work with, and has such date precomputed and packed within.
 #[derive(Copy, Clone)] // is also Send
-#[allow(clippy::unsafe_derive_deserialize)] // new_unchecked is only unsafe for bad values
+#[allow(clippy::unsafe_derive_deserialize)] // deserializing checks the values
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(try_from = "RawDateTime"))]
 #[cfg_attr(feature = "bitcode", derive(Decode, Encode))]
 pub struct DateTime<C: Calendar, S: Standard> {
     packed: u64,
@@ -66,6 +67,31 @@ pub struct DateTime<C: Calendar, S: Standard> {
     cal: PhantomData<C>,
     #[cfg_attr(feature = "serde", serde(rename = "_std"))]
     std: PhantomData<S>,
+}
+
+// A DateTime as serialized, before its values are checked
+#[cfg(feature = "serde")]
+#[derive(Deserialize)]
+struct RawDateTime {
+    packed: u64,
+    attos: u64,
+    _cal: PhantomData<()>,
+    _std: PhantomData<()>,
+}
+
+#[cfg(feature = "serde")]
+impl<C: Calendar, S: Standard> TryFrom<RawDateTime> for DateTime<C, S> {
+    type Error = Error;
+
+    fn try_from(raw: RawDateTime) -> Result<Self, Error> {
+        let unchecked = Self {
+            packed: raw.packed,
+            attos: raw.attos,
+            cal: PhantomData,
+            std: PhantomData,
+        };
+        unchecked.checked()
+    }
 }
 
 // NOTE: Day and Month are packed with 0 basis (0 = 1st day or 1st month)
@@ -184,6 +210,19 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
         }
 
         Ok(unsafe { Self::new_unchecked(year, month, day, hour, minute, second, attosecond) })
+    }
+
+    // The same DateTime, if every part of it is in range, and nothing else is
+    // packed in
+    #[cfg(any(feature = "serde", test))]
+    fn checked(self) -> Result<Self, Error> {
+        let (h, m, s, a) = self.time();
+        let checked = Self::new(self.year(), self.month(), self.day(), h, m, s, a)?;
+        if checked.packed == self.packed {
+            Ok(checked)
+        } else {
+            Err(Error::RangeError)
+        }
     }
 
     /// Create a new `DateTime` from the given parts, with BC years.
@@ -1338,6 +1377,48 @@ mod test {
             DateTime::<Gregorian, Utc>::from(DatedInstant::from(leap)),
             leap
         );
+    }
+
+    #[test]
+    fn test_checked() {
+        let good = DateTime::<Gregorian, Utc>::new(2016, 12, 31, 23, 59, 60, 5).unwrap();
+        assert_eq!(good.checked().unwrap(), good);
+        let bad = [
+            unsafe { DateTime::<Gregorian, Utc>::new_unchecked(2020, 13, 1, 0, 0, 0, 0) },
+            unsafe { DateTime::<Gregorian, Utc>::new_unchecked(2021, 2, 29, 0, 0, 0, 0) },
+            unsafe { DateTime::<Gregorian, Utc>::new_unchecked(2020, 1, 1, 24, 0, 0, 0) },
+            unsafe { DateTime::<Gregorian, Utc>::new_unchecked(2020, 1, 1, 12, 0, 60, 0) },
+            unsafe { DateTime::<Gregorian, Utc>::new_unchecked(2020, 1, 1, 0, 0, 0, u64::MAX) },
+        ];
+        for b in bad {
+            assert!(b.checked().is_err(), "{b:?}");
+        }
+        let tt = unsafe { DateTime::<Gregorian, Tt>::new_unchecked(2016, 12, 31, 23, 59, 60, 0) };
+        assert!(tt.checked().is_err());
+        // nothing packed in the reserved bits either
+        let mut stray = good;
+        stray.packed |= 0x10;
+        assert!(stray.checked().is_err());
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_deserialize_checks() {
+        use std::marker::PhantomData;
+        let raw = |packed, attos| super::RawDateTime {
+            packed,
+            attos,
+            _cal: PhantomData,
+            _std: PhantomData,
+        };
+        let good = DateTime::<Gregorian, Tt>::new(2026, 10, 16, 1, 2, 3, 4).unwrap();
+        assert_eq!(
+            DateTime::<Gregorian, Tt>::try_from(raw(good.packed, 4)).unwrap(),
+            good
+        );
+        // month 16
+        assert!(DateTime::<Gregorian, Tt>::try_from(raw(good.packed | 0xF, 4)).is_err());
+        assert!(DateTime::<Gregorian, Tt>::try_from(raw(good.packed, u64::MAX)).is_err());
     }
 
     #[test]
