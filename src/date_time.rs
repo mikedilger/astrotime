@@ -394,7 +394,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
         let mut inside_a_leap: bool = false;
 
         // Leap second adjustment
-        if S::abbrev() == "UTC" {
+        if S::is_utc() {
             let to_gregorian = C::epoch() - Epoch::GregorianCalendar.as_dated_instant();
             if let Some((label, second_60)) = crate::leaps::early_utc_label(duration + to_gregorian)
             {
@@ -656,7 +656,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
     /// 60 but this is not a UTC leap second.
     pub fn set_second(&mut self, second: u8) -> Result<(), Error> {
         if second > 59 {
-            if second > 60 || S::abbrev() != "UTC" {
+            if second > 60 || !S::is_utc() {
                 return Err(Error::RangeError);
             }
             // We check we are the last minute so that our '61' below doesn't
@@ -666,7 +666,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
                 return Err(Error::RangeError);
             }
             // Before 1972, UTC days could end with a fraction of a second added
-            if S::abbrev() == "UTC" {
+            if S::is_utc() {
                 let day_end = Duration::new((self.day_number() + 1) * 86400, 0)
                     + (C::epoch() - Epoch::GregorianCalendar.as_dated_instant());
                 if let Some(added) = crate::leaps::early_added_at(day_end) {
@@ -803,7 +803,7 @@ impl<C: Calendar, S: Standard> DateTime<C, S> {
         }
 
         // Leap second adjustment
-        if S::abbrev() == "UTC" {
+        if S::is_utc() {
             let label = naive + (C::epoch() - Epoch::GregorianCalendar.as_dated_instant());
             if let Some(offset) = crate::leaps::early_utc_offset(label, self.second() == 60) {
                 return naive + offset;

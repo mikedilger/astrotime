@@ -21,6 +21,13 @@ pub trait Standard: Debug + Sized + Copy {
 
     /// Linear scale factor from TT, usually None
     fn tt_scale() -> Option<f64>;
+
+    /// Whether this is UTC, which this crate steps by leap seconds (and,
+    /// before 1972, by the published offsets from TAI).
+    #[must_use]
+    fn is_utc() -> bool {
+        false
+    }
 }
 
 /// Terrestrial Time (TT)
@@ -94,6 +101,10 @@ impl Standard for Utc {
 
     fn tt_offset() -> Duration {
         Duration::new(42, 184_000_000_000_000_000)
+    }
+
+    fn is_utc() -> bool {
+        true
     }
 
     fn tt_scale() -> Option<f64> {
