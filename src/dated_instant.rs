@@ -305,7 +305,7 @@ mod test {
         );
 
         assert_eq!(
-            DatedInstant::from_julian_day_precise(2440587, 43200 + 41, 184_000_000_000_000_000)
+            DatedInstant::from_julian_day_precise(2440587, 43200 + 42, 184_000_000_000_000_000)
                 .unwrap(),
             Epoch::Unix.as_dated_instant()
         );

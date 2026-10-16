@@ -79,13 +79,12 @@ impl Standard for Tai {
 /// seconds inserted from time to time based on the Earth's rotation.
 ///
 /// This type is proleptic. For all dates prior to 1 Jan 1972, we presume
-/// 9 seconds have elapsed (like leaps) offsetting from TAI permanently by 9
-/// seconds, even though that's not what happened at the time (what happened at
-/// the time was that UTC wasn't syncronized to TAI by integer leap seconds,
-/// but rather to other time sources and contained fractional leap seconds which
-/// are hard to reconstruct or even get a list of).  For all dates prior to
-/// 1 January 1960, UTC didn't exist, but we pretend it did, offset 9 seconds
-/// from TAI.
+/// UTC was offset from TAI by 10 seconds, as it was on that date, even though
+/// that's not what happened at the time (what happened at the time was that
+/// UTC wasn't syncronized to TAI by integer leap seconds, but rather to other
+/// time sources and contained fractional leap seconds).  For all dates prior
+/// to 1 January 1960, UTC didn't exist, but we pretend it did, offset 10
+/// seconds from TAI.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "bitcode", derive(Decode, Encode))]
@@ -96,7 +95,7 @@ impl Standard for Utc {
     }
 
     fn tt_offset() -> Duration {
-        Duration::new(41, 184_000_000_000_000_000)
+        Duration::new(42, 184_000_000_000_000_000)
     }
 
     fn tt_scale() -> Option<f64> {

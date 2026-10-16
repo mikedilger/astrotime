@@ -131,14 +131,14 @@ with a :59 and a :60 but unixtime has no such differentiator.
 
 Spreadsheets (starting with MicroSoft Excel?) store dates as a floating point count of days
 since December 30, 1899, at midnight. This epoch is very close to J1900.0 but is 36 hours
-(minus 41.184 seconds TT/UTC conversion) before J1900.0.
+(minus 42.184 seconds TT/UTC conversion) before J1900.0.
 
 Astronomers use the TT (terrestrial time) standard, because leap second shifting, while
 it accounts for the rotation of the earth, confuses all other astronomical timings. For
 example, the position of the Earth in it's orbit around the Sun has nothing to do with
-whether or not Earth's rotation on it's axis has changed. TT originally differs from UTC
-by 41.184 seconds, but currently differs from UTC by a little over a minute, and each new
-leap second increases the disparity.
+whether or not Earth's rotation on it's axis has changed. TT differed from UTC by
+42.184 seconds in 1972, but currently differs from UTC by a little over a minute, and each
+new leap second increases the disparity.
 
 Astronomers use Julian Days which start and end at noon GMT so that the entire night lies
 within a single Julian day. This is because astronomers work at night, and it is more
