@@ -64,9 +64,19 @@ impl Duration {
     }
 
     /// Make a new `Duration` from seconds as `f64`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `secs` is not a number, or is out of range.
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub const fn from_seconds(secs: f64) -> Self {
+        // 2^63, the first whole second beyond i64
+        const LIMIT: f64 = 9_223_372_036_854_775_808.0;
+        assert!(
+            secs >= -LIMIT && secs < LIMIT,
+            "Duration seconds out of range"
+        );
         Self {
             secs: secs.trunc() as i64,
             attos: (secs.fract() * ATTOS_PER_SEC_F64) as i64,
@@ -426,6 +436,30 @@ mod test {
             -12.345
         );
         assert_eq!(Duration::new(0, -1).as_f64_seconds(), -1e-18);
+    }
+
+    #[test]
+    fn test_from_seconds() {
+        assert_eq!(
+            Duration::from_seconds(-1.5),
+            Duration::new(-1, -500_000_000_000_000_000)
+        );
+        assert_eq!(
+            Duration::from_seconds(-9_223_372_036_854_775_808.0).secs,
+            i64::MIN
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Duration seconds out of range")]
+    fn test_from_seconds_out_of_range() {
+        let _ = Duration::from_seconds(1e19);
+    }
+
+    #[test]
+    #[should_panic(expected = "Duration seconds out of range")]
+    fn test_from_seconds_nan() {
+        let _ = Duration::from_seconds(f64::NAN);
     }
 
     #[test]
