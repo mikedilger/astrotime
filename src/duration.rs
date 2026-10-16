@@ -271,8 +271,8 @@ impl fmt::Display for Duration {
             write!(f, "P")?; // period designator
         }
 
-        let mut s = self.secs.abs();
-        let a = self.attos_part().abs();
+        let mut s = self.secs.unsigned_abs();
+        let a = self.attos_part().unsigned_abs();
 
         let days = s / 86400;
         s %= 86400; // only days should show any negative values
@@ -581,6 +581,10 @@ mod test {
         assert_eq!(&*format!("{d}"), "PT0.000000000000000031S");
         let d = Duration { secs: 0, attos: 0 };
         assert_eq!(&*format!("{d}"), "P");
+        assert_eq!(
+            &*format!("{}", Duration::MIN),
+            "-P106751991167300DT15H30M8.999999999999999999S"
+        );
     }
 
     #[test]
