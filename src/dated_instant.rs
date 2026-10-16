@@ -245,18 +245,29 @@ mod test {
     #[test]
     fn test_dated_instant_ntp_conversions() {
         let y1977 = Epoch::Y1977.as_dated_instant();
-        let start = y1977 - Duration::new(3, ATTOS_PER_SEC_I64 / 2);
-        let end = y1977 - Duration::new(3, ATTOS_PER_SEC_I64 / 2);
+        assert_eq!(y1977.as_ntp_date(), (2_429_913_600, 0));
 
-        let increment = Duration::new(0, ATTOS_PER_SEC_I64 / 2);
+        let start = y1977 - Duration::new(3, ATTOS_PER_SEC_I64 / 2);
+        let end = y1977 + Duration::new(3, ATTOS_PER_SEC_I64 / 2);
+
+        let increment = Duration::new(0, ATTOS_PER_SEC_I64 / 4);
         let mut instant = start;
+        let mut count = 0;
         while instant < end {
             let (a, b) = instant.as_ntp_date();
             let instant2 = DatedInstant::from_ntp_date(a, b);
-            assert_eq!(instant, instant2);
+            // NTP repeats the leap second, so it comes back as the next one
+            let leap = Duration::new(1, 0);
+            if instant >= y1977 - leap && instant < y1977 {
+                assert_eq!(instant + leap, instant2);
+            } else {
+                assert_eq!(instant, instant2);
+            }
 
             instant += increment;
+            count += 1;
         }
+        assert_eq!(count, 28);
     }
     #[test]
     fn test_dated_instant_julian_day_conversions() {
