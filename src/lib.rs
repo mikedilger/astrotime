@@ -86,7 +86,7 @@ mod standard;
 pub use standard::{Standard, Tai, Tcg, Tt, Utc};
 
 mod leaps;
-pub use leaps::{leap_instants, leap_seconds_elapsed_at};
+pub use leaps::{leap_instants, leap_seconds_elapsed_at, leap_seconds_expire};
 
 mod date_time;
 pub use date_time::DateTime;

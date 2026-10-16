@@ -20,7 +20,9 @@ use crate::{ATTOS_PER_SEC_I128, DatedInstant, Duration, Epoch};
  */
 
 // https://data.iana.org/time-zones/data/leap-seconds.list
-// Expires 28 June 2026
+// Expires 28 June 2027
+const IANA_NTP_EXPIRES: i64 = 4_023_129_600;
+
 #[allow(clippy::unreadable_literal)]
 const IANA_NTP_LEAP_SECONDS: &[i64] = &[
     2272060800, //	10	# 1 Jan 1972 (not a leap second, TAI-UTC starts at 10)
@@ -227,10 +229,19 @@ impl Iterator for LeapInstantIter {
     }
 }
 
+/// When the leap second list built into this crate expires. Leap seconds
+/// are announced about six months ahead; after this we assume there are no
+/// more, which may be wrong.
+#[must_use]
+pub fn leap_seconds_expire() -> DatedInstant {
+    DatedInstant::from_ntp_date(IANA_NTP_EXPIRES, 0)
+}
+
 /// This counts how many leap seconds have elapsed at a given instant.
 ///
 /// This only includes IANA listed leap seconds. That is to say, we
 /// are not counting the 10 seconds separating UTC and TAI in 1972.
+/// After [`leap_seconds_expire`] no further leap seconds are assumed.
 ///
 /// If the instant is during a leap second, that one doesn't count.
 /// If it is immediately after, which is at the IANA instant itself,
@@ -339,6 +350,14 @@ mod test {
             Gregorian::day_number(1972, 1, 1).unwrap(),
             super::MJD_1972 + super::MJD_DAY_NUMBER
         );
+    }
+
+    #[test]
+    fn test_leap_seconds_expire() {
+        let expires: DatedInstant =
+            From::from(DateTime::<Gregorian, Utc>::new(2027, 6, 28, 0, 0, 0, 0).unwrap());
+        assert_eq!(super::leap_seconds_expire(), expires);
+        assert_eq!(leap_instants().count(), 27);
     }
 
     #[test]
